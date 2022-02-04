@@ -6,8 +6,9 @@ import re
 import collections
 import itertools
 import readline
-from rich import print
+
 from rich.console import Console
+print = Console(color_system='truecolor').print
 
 class Wordle:
 
@@ -82,11 +83,11 @@ class Wordle:
 
     def print_response(self, r):
         if r == 'i':
-            self.console.print(Wordle.LETTER_IN, end=' ')
+            print(Wordle.LETTER_IN, end=' ')
         elif r == 'o':
-            self.console.print(Wordle.LETTER_OUT, end=' ')
+            print(Wordle.LETTER_OUT, end=' ')
         elif r == 'y':
-            self.console.print(Wordle.LETTER_EXACT, end=' ')
+            print(Wordle.LETTER_EXACT, end=' ')
 
     def show_response(self, iteration):
 
@@ -95,11 +96,11 @@ class Wordle:
 
         for r in resp:
             self.print_response(r)
-        self.console.print()
+        print()
 
         for c in guess:
-            self.console.print(c, end=' ')
-        self.console.print()
+            print(c, end=' ')
+        print()
 
     def show_responses(self):
 
@@ -121,9 +122,6 @@ class Wordle:
         return resp
 
     def play(self):
-        self.word = self.pick_word()
-        self.console.print("I picked a word, what's your guess?")
-        # self.console.print(self.word)
 
         for i in range(6):
             guess = self.get_guess()
@@ -133,10 +131,10 @@ class Wordle:
             self.show_responses()
 
             if resp == 'y' * self.wordlen:
-                self.console.print(f"[bold green]You got it {len(self.iterations)} tries![/bold green]")
+                print(f"[bold green]You got it {len(self.iterations)} tries![/bold green]")
                 return
 
-        self.console.print(f"[bold yellow]You ran out of tries. The word was '{self.word}'[/bold yellow]")
+        print(f"[bold yellow]You ran out of tries. The word was '{self.word}'[/bold yellow]")
 
 
 def main(args):
