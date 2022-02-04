@@ -10,16 +10,16 @@ The only dependency is `rich`, so therefore `pip install rich`.
 
 This is the _"game engine"_.
 
-`wordle.py --help` for a few options
-`wordle.py` and follow the prompts.
-`wordle.py word` to force a word instead of a random one.
+* `wordle.py --help` for a few options
+* `wordle.py` and follow the prompts.
+* `wordle.py word` to force a word instead of a random one.
 
 ## solver.py
 
 This will make suggestions to help solve a wordle puzzle.
 
-`solver.py --first` make a suggestion for the first word and exit
-`solver.py` follow the prompts
+* `solver.py --first` make a suggestion for the first word and exit
+* `solver.py` follow the prompts
 
 Inputting the server response is granted a bit crappy.
 
