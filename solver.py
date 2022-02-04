@@ -9,9 +9,10 @@ import readline
 
 class Solver:
 
-    def __init__(self, dpath, wordlen=5):
+    def __init__(self, dpath, wordlen=5, first=False):
         self.wordlen = wordlen
         self.words = self.read_dict(dpath, self.wordlen)
+        self.first = first
         self.letter_counts = self.count_letters(self.words)
         self.iteration = 0     # what attempt are we on
         self.pattern = ['.'] * wordlen
@@ -184,6 +185,9 @@ class Solver:
         suggestions = self.get_suggestions()
         self.group_print(suggestions, 10)
 
+        if self.first:
+            raise KeyboardInterrupt
+
         guess = self.get_guess()
         resp = self.get_response()
         exact, contains = self.parse_response(guess, resp)
@@ -196,9 +200,8 @@ class Solver:
 
 def main(args):
 
-    solver = Solver(args.dict, args.len)
-
     try:
+        solver = Solver(args.dict, args.len, args.first)
         solver.solve()
     except KeyboardInterrupt:
         pass
@@ -209,6 +212,7 @@ if __name__ == '__main__':
     #parser.add_argument('--dict', default='/usr/share/dict/words', type=pathlib.Path)
     parser.add_argument('--dict', default='words5.txt', type=pathlib.Path)
     parser.add_argument('--len', default=5)
+    parser.add_argument('--first', action='store_true', help="show first suggestion and exit")
     args = parser.parse_args()
 
     main(args)
