@@ -16,13 +16,19 @@ class Wordle:
     LETTER_OUT   = "[grey]◼[/grey]"
     LETTER_EXACT = "[green]◼[/green]"
 
-    def __init__(self, dpath, wordlen=5):
-        self.console = Console(color_system='truecolor')
-        # self.console.print(f"{Wordle.LETTER_IN} {Wordle.LETTER_OUT} {Wordle.LETTER_EXACT}")
+    def __init__(self, dpath, wordlen=5, start_word=None):
 
         self.wordlen = wordlen
         self.words = self.read_dict(dpath, self.wordlen)
         self.iterations = [] # [guess, response]
+
+        if start_word:
+            self.word = start_word
+            print(f"using your word: {start_word}")
+        else:
+            self.word = self.pick_word()
+            print("I picked a word, what's your guess?")
+        # print(self.word)
 
     @property
     def words(self):
@@ -140,7 +146,7 @@ class Wordle:
 def main(args):
 
     try:
-        wordle = Wordle(args.dict, args.len)
+        wordle = Wordle(args.dict, args.len, args.start_word)
         wordle.play()
     except KeyboardInterrupt:
         pass
@@ -151,6 +157,7 @@ if __name__ == '__main__':
     #parser.add_argument('--dict', default='/usr/share/dict/words', type=pathlib.Path)
     parser.add_argument('--dict', default='words5.txt', type=pathlib.Path)
     parser.add_argument('--len', default=5)
+    parser.add_argument('start_word', nargs='?', help="use this word instead of a random one")
     args = parser.parse_args()
 
     main(args)
