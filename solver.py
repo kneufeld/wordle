@@ -9,13 +9,13 @@ import readline
 
 class Solver:
 
-    def __init__(self, dpath, wordlen=5, first=False):
-        self.wordlen = wordlen
-        self.words = self.read_dict(dpath, self.wordlen)
-        self.first = first
+    def __init__(self, args):
+        self.wordlen = args.len
+        self.words = self.read_dict(args.dict, self.wordlen)
+        self.first = args.first
         self.letter_counts = self.count_letters(self.words)
         self.iteration = 0     # what attempt are we on
-        self.pattern = ['.'] * wordlen
+        self.pattern = ['.'] * self.wordlen
 
     @property
     def words(self):
@@ -98,7 +98,7 @@ class Solver:
 
         return True
 
-    def group_print(self, words, n=10):
+    def print_group(self, words, n=10):
         if not n:
             n = len(words)
 
@@ -110,6 +110,24 @@ class Solver:
                 break
 
             print(f"{k}: {', '.join([k for k, _ in v])}")
+
+    def print_letter_counts(self):
+        counts = self.count_letters(self.words)
+        by_letter = sorted(counts.items())
+
+        print("\nin alphabetical order:\n", end='')
+        for l, c in by_letter:
+            print(f"{l}: {c}", end=', ')
+        print()
+
+        # in count order
+        by_count = sorted(counts.items(), key=lambda item: item[1], reverse=True)
+
+        print("\nin numerical order:\n", end='')
+        for l, c in by_count:
+            print(f"{l}: {c}", end=', ')
+        print()
+
 
     def get_guess(self):
 
@@ -183,10 +201,10 @@ class Solver:
         print(f"current word list length: {self.length}")
 
         suggestions = self.get_suggestions()
-        self.group_print(suggestions, 10)
+        self.print_group(suggestions, 10)
 
         if self.first:
-            raise KeyboardInterrupt
+            raise SystemExit
 
         guess = self.get_guess()
         resp = self.get_response()
@@ -194,6 +212,10 @@ class Solver:
         self.words = self.find_matches(exact, contains)
 
     def solve(self):
+        if args.count:
+            self.print_letter_counts()
+            raise SystemExit
+
         # while self.iteration < 6:
         while True:
             self.make_guess()
@@ -201,7 +223,7 @@ class Solver:
 def main(args):
 
     try:
-        solver = Solver(args.dict, args.len, args.first)
+        solver = Solver(args)
         solver.solve()
     except KeyboardInterrupt:
         pass
@@ -213,6 +235,7 @@ if __name__ == '__main__':
     parser.add_argument('--dict', default='words5.txt', type=pathlib.Path)
     parser.add_argument('--len', default=5)
     parser.add_argument('--first', action='store_true', help="show first suggestion and exit")
+    parser.add_argument('--count', action='store_true', help="show letter counts")
     args = parser.parse_args()
 
     main(args)
