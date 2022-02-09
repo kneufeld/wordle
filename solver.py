@@ -216,20 +216,21 @@ class Solver:
 
     def solve(self):
 
-        if args.solve:
+        if args.word:
             iteration = 0
             self.wordle = Wordle(args)
-            self.wordle.word = args.solve
+            self.wordle.word = args.word
 
             while self.length > 1:
                 iteration += 1
+                curr_len = self.length
                 suggestions = self.get_suggestions()
                 guess = suggestions[0][0]
                 resp = self.wordle.check_word(guess)
                 exact, contains = self.parse_response(guess, resp)
                 self.words = self.find_matches(exact, contains)
 
-                print(f"round {iteration}: guess: {guess}, resp: {resp}, dict len: {self.length}")
+                print(f"round {iteration}: guess: {guess}, resp: {resp}, dict len: {curr_len}, {[v for v,c in suggestions[:5]]}")
 
             self.make_guess()
 
@@ -259,7 +260,7 @@ if __name__ == '__main__':
     parser.add_argument('--len', default=5)
     parser.add_argument('--first', action='store_true', help="show first suggestion and exit")
     parser.add_argument('--count', action='store_true', help="show letter counts")
-    parser.add_argument('--solve', metavar='word', help="automate solving using first choice")
+    parser.add_argument('word', nargs='?', help="automate solving of given word")
     args = parser.parse_args()
 
     main(args)
