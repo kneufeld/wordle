@@ -7,9 +7,21 @@ import collections
 import itertools
 import readline
 
+Wordle = None
+
+def import_wordle():
+    # super hacky, read and parse wordle.py to get the Wordle class
+    # so we can use its read_dict method. Gotta be DRY.
+    l = {}
+    exec(open('wordle.py').read(), {}, l)
+
+    global Wordle
+    Wordle = l['Wordle']
+
 class Solver:
 
     def __init__(self, args):
+        self.args = args
         self.wordlen = args.len
         self.words = self.read_dict(args.dict, self.wordlen)
         self.first = args.first
@@ -33,37 +45,25 @@ class Solver:
         return len(self.words)
 
     def read_dict(self, dictfile, wordlen):
-        words = set()
-
-        dictionary = dictfile.open().read().splitlines()
-        print(f"dictionary contains {len(dictionary)} words")
-
-        for word in dictionary:
-            if all([
-                len(word) == wordlen,       # 5 letters long
-                len(set(word)) == wordlen,  # 5 unique letters, not the same as above, eg. otter
-                word == word.lower()        # no capitals
-            ]):
-                words.add(word)
-
-        # logger.debug(f"our word list contains {len(words)}, {wordlen} letter words")
-        return words
+        return Wordle.read_dict(dictfile, wordlen)
 
     def count_letters(self, words):
         """
         count number of times each letter occurs in all words
+        use set(word) since there are lots of fake words in the dict that skew
+        the results, eg. esses
         """
         counts = collections.defaultdict(int)
 
         for word in words:
-            for letter in word:
+            for letter in set(word):
                 counts[letter] += 1
 
         return counts
 
     def word_score(self, word):
         return sum([
-            self.letter_counts[c] for c in word
+            self.letter_counts[c] for c in set(word)
         ])
 
     def find_matches(self, exact, contains):
@@ -142,6 +142,9 @@ class Solver:
             return word
 
     def get_response(self):
+        """
+        ask user to type in response from wordle
+        """
         print("i=letter in word (yellow), o=letter not in word (grey), y=correct spot (green)")
 
         while True:
@@ -151,7 +154,7 @@ class Solver:
 
             if not all([
                 len(resp) == 5,
-                set(resp) & set('ioy'), # intersection
+                set(resp) & Wordle.response_set(), # intersection
             ]):
                 print("invalid response, must be one of ioy 5 times")
                 continue
@@ -174,12 +177,12 @@ class Solver:
 
         for i, l in enumerate(resp):
             c = guess[i]
-            if l == 'i':
+            if l == Wordle.LETTER_IN:
                 contains += c
                 self.pattern[i] = _elsewhere(self.pattern[i], c)
-            elif l == 'o':
+            elif l == Wordle.LETTER_OUT:
                 self.letter_counts[c] = 0
-            elif l == 'y':
+            elif l == Wordle.LETTER_EXACT:
                 self.pattern[i] = c
 
         # print(self.pattern, contains)
@@ -192,11 +195,11 @@ class Solver:
 
         if self.length == 1:
             print(f"word must be: {self.words.pop()}")
-            raise KeyboardInterrupt
+            raise SystemExit
 
         if self.length == 0:
             print("our word list is now empty, we don't know the word")
-            raise KeyboardInterrupt
+            raise SystemExit
 
         print(f"current word list length: {self.length}")
 
@@ -212,15 +215,35 @@ class Solver:
         self.words = self.find_matches(exact, contains)
 
     def solve(self):
+
+        if args.solve:
+            iteration = 0
+            self.wordle = Wordle(args)
+            self.wordle.word = args.solve
+
+            while self.length > 1:
+                iteration += 1
+                suggestions = self.get_suggestions()
+                guess = suggestions[0][0]
+                resp = self.wordle.check_word(guess)
+                exact, contains = self.parse_response(guess, resp)
+                self.words = self.find_matches(exact, contains)
+
+                print(f"round {iteration}: guess: {guess}, resp: {resp}, dict len: {self.length}")
+
+            self.make_guess()
+
         if args.count:
             self.print_letter_counts()
-            raise SystemExit
+            return
 
-        # while self.iteration < 6:
         while True:
             self.make_guess()
 
+
 def main(args):
+
+    import_wordle()
 
     try:
         solver = Solver(args)
@@ -236,6 +259,7 @@ if __name__ == '__main__':
     parser.add_argument('--len', default=5)
     parser.add_argument('--first', action='store_true', help="show first suggestion and exit")
     parser.add_argument('--count', action='store_true', help="show letter counts")
+    parser.add_argument('--solve', metavar='word', help="automate solving using first choice")
     args = parser.parse_args()
 
     main(args)
