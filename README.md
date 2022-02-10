@@ -4,7 +4,8 @@ My implementation of https://www.powerlanguage.co.uk/wordle/
 
 ## Installation
 
-The only dependency is `rich`, so therefore `pip install rich`.
+The only dependency is `rich`, so therefore `pip install rich`. But as always
+use a [virtual env](https://docs.python.org/3/tutorial/venv.html).
 
 ## wordle.py
 
@@ -23,9 +24,10 @@ if the word is already known.
 * `solver.py` follow the prompts
 * `solver.py the_word` to automate finding the given word
 * `solver.py --first` make a suggestion for the first word and exit
+* `solver.py --count` show letter distributions and exit
 
 Inputting the server response is kinda crappy.
 
 * `i` letter is _In_ the word
 * `o` letter is _Out_ of the word
-* `e` _Exact_, the letter is in the exact spot
+* `e` letter is in the _Exact_ spot
