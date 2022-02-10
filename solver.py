@@ -216,12 +216,19 @@ class Solver:
 
     def solve(self):
 
+        # solve the provided word without interaction
         if args.word:
             iteration = 0
             self.wordle = Wordle(args)
             self.wordle.word = args.word
 
-            while self.length > 1:
+            resp = None
+            found_resp = Wordle.LETTER_EXACT * self.wordlen
+
+            # doing this more complicated test instead of just self.length > 1
+            # so that we show the last guess instead of breaking out of loop
+            # one iteration too soon
+            while (resp != found_resp) and (self.length > 0):
                 iteration += 1
                 curr_len = self.length
                 suggestions = self.get_suggestions()
