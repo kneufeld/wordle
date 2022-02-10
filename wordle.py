@@ -15,7 +15,7 @@ class Wordle:
 
     LETTER_IN    = 'i' # in, in word but wrong spot
     LETTER_OUT   = 'o' # out, not in word
-    LETTER_EXACT = 'y' # yes, exact spot
+    LETTER_EXACT = 'e' # exact spot
 
     def __init__(self, args):
         self.args = args
@@ -174,7 +174,7 @@ class WordleUI:
             self.rounds.append([guess, resp])
             self.show_rounds()
 
-            if resp == 'y' * self.wordle.wordlen:
+            if resp == self.LETTER_EXACT * self.wordle.wordlen:
                 print(f"[bold green]You got it in {len(self.rounds)} tries![/bold green]")
                 self.show_summary()
                 return

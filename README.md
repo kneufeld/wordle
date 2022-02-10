@@ -16,13 +16,16 @@ This is the _"game engine"_.
 
 ## solver.py
 
-This will make suggestions to help solve a wordle puzzle.
+This will make suggestions to help solve a wordle puzzle interactively
+when the word is not known, or it can show the steps of solving a puzzle
+if the word is already known.
 
-* `solver.py --first` make a suggestion for the first word and exit
 * `solver.py` follow the prompts
+* `solver.py the_word` to automate finding the given word
+* `solver.py --first` make a suggestion for the first word and exit
 
-Inputting the server response is granted a bit crappy.
+Inputting the server response is kinda crappy.
 
 * `i` letter is _In_ the word
 * `o` letter is _Out_ of the word
-* `y` _Yes_, the letter is in the exact spot
+* `e` _Exact_, the letter is in the exact spot
