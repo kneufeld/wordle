@@ -72,13 +72,13 @@ class Solver:
         """
         matches = set()
         exact = re.compile(exact)
-        exclude = [c for c, v in self.letter_counts.items() if v == 0]
+        excludes = [c for c, v in self.letter_counts.items() if v == 0]
 
         for word in self.words:
             if all([
                 exact.match(word),
-                all([l in word for l in contains]),
-                not any([l in word for l in exclude])
+                all([c in word for c in contains]),
+                not any([c in word for c in excludes])
             ]):
                 matches.add(word)
 
@@ -164,14 +164,16 @@ class Solver:
 
     def parse_response(self, guess, resp):
         def _elsewhere(p, c):
+            """
+            make a regex pattern
+            .    -> [^c]
+            [^c] -> [^cd]
+            """
             if p == '.':
                 return f"[^{c}]"
 
             chars = p[2:-1]
             return f"[^{chars}{c}]"
-
-        def splice(s, i, c):
-            return s[:i] + c + s[i + 1:]
 
         contains = ''
 
@@ -185,7 +187,8 @@ class Solver:
             elif l == Wordle.LETTER_EXACT:
                 self.pattern[i] = c
 
-        # print(self.pattern, contains)
+        # excludes = [l for l, c in self.letter_counts.items() if c == 0]
+        # print(f"{self.pattern}, {contains=}, {excludes=}")
 
         exact = ''.join(self.pattern)
         return exact, contains
@@ -214,32 +217,40 @@ class Solver:
         exact, contains = self.parse_response(guess, resp)
         self.words = self.find_matches(exact, contains)
 
+    def auto_solve(self):
+        """
+        given a word, show the steps the solver takes to find it
+        """
+
+        iteration = 0
+        self.wordle = Wordle(args)
+        self.wordle.word = args.word
+
+        resp = None
+        found_resp = Wordle.LETTER_EXACT * self.wordlen
+
+        # doing this more complicated test instead of just self.length > 1
+        # so that we show the last guess instead of breaking out of loop
+        # one iteration too soon
+        while (resp != found_resp) and (self.length > 0):
+            iteration += 1
+            curr_len = self.length
+            suggestions = self.get_suggestions()
+            guess = suggestions[0][0]
+            resp = self.wordle.check_word(guess)
+            exact, contains = self.parse_response(guess, resp)
+            self.words = self.find_matches(exact, contains)
+
+            print(f"round {iteration}: guess: {guess}, resp: {resp}, dict len: {curr_len}, {[v for v,c in suggestions[:5]]}")
+
+        self.make_guess()
+
     def solve(self):
 
         # solve the provided word without interaction
         if args.word:
-            iteration = 0
-            self.wordle = Wordle(args)
-            self.wordle.word = args.word
-
-            resp = None
-            found_resp = Wordle.LETTER_EXACT * self.wordlen
-
-            # doing this more complicated test instead of just self.length > 1
-            # so that we show the last guess instead of breaking out of loop
-            # one iteration too soon
-            while (resp != found_resp) and (self.length > 0):
-                iteration += 1
-                curr_len = self.length
-                suggestions = self.get_suggestions()
-                guess = suggestions[0][0]
-                resp = self.wordle.check_word(guess)
-                exact, contains = self.parse_response(guess, resp)
-                self.words = self.find_matches(exact, contains)
-
-                print(f"round {iteration}: guess: {guess}, resp: {resp}, dict len: {curr_len}, {[v for v,c in suggestions[:5]]}")
-
-            self.make_guess()
+            self.auto_solve()
+            return
 
         if args.count:
             self.print_letter_counts()
