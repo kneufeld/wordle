@@ -74,22 +74,21 @@ class Solver:
 
     def letter_distribution(self, words):
         """
-        return a dict with with letter percentages
-        dist['a'][0] = .2 # words that start with 'a' are %20 of the words
+        return a dict with letter percentages of each location
+        dist['a'][0] = .02 # 2% of words start with 'a'
+        dist['a'][4] = .02 # 2% of words end with 'a'
         """
         def count_matches(words, pattern):
-            ret = 0
-            for word in words:
-                if pattern.match(word):
-                    ret += 1
-            return ret
+            return sum([
+                1 for word in words if pattern.match(word)
+            ])
 
         dist = collections.defaultdict(lambda: [0] * self.wordlen)
 
-        for i in range(self.wordlen):
-            for c in range(26):
-                c = chr(ord('a') + c)
+        for c in range(26):
+            c = chr(ord('a') + c)
 
+            for i in range(self.wordlen):
                 pattern = '.' * self.wordlen
                 pattern = splice(pattern, i, c)
                 pattern = re.compile(pattern)
@@ -110,7 +109,7 @@ class Solver:
         per /= self.wordlen # average letter position
         score *= 1 + per
 
-        return int(score)
+        return score
 
     def find_matches(self, exact, contains):
         """
@@ -164,7 +163,7 @@ class Solver:
             if i >= n:
                 break
 
-            print(f"{k}: {', '.join([k for k, _ in v])}")
+            print(f"{int(k)}: {', '.join([k for k, _ in v])}")
 
     def print_letter_counts(self):
         by_letter = sorted(self._letter_counts.items())
@@ -202,15 +201,15 @@ class Solver:
         print("i=letter in word (yellow), o=letter not in word (grey), e=exact spot (green)")
 
         while True:
-            resp = input("server response (5 x ioy): ")
+            resp = input("server response (5 x ioe): ")
             resp = resp.replace(' ', '').strip()
             # print(f"{resp=}")
 
             if not all([
                 len(resp) == 5,
-                set(resp) & Wordle.response_set(), # intersection
+                set(resp) <= Wordle.response_set(), # resp is subset of response set
             ]):
-                print("invalid response, must be one of ioy 5 times")
+                print("invalid response, must be one of ioe 5 times")
                 continue
             else:
                 print()
