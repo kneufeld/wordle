@@ -34,7 +34,7 @@ class Solver:
         self.iteration = 0     # what attempt are we on
         self.pattern = ['.'] * self.wordlen
 
-        # self.update_letter_stats()
+        self.update_letter_stats()
 
     @property
     def words(self):
@@ -85,7 +85,6 @@ class Solver:
             return ret
 
         dist = collections.defaultdict(lambda: [0] * self.wordlen)
-        words = tuple(sorted(words))
 
         for i in range(self.wordlen):
             for c in range(26):
@@ -94,7 +93,7 @@ class Solver:
                 pattern = '.' * self.wordlen
                 pattern = splice(pattern, i, c)
                 pattern = re.compile(pattern)
-                matches = count_matches(words, pattern)
+                matches = count_matches(self.words, pattern)
 
                 dist[c][i] = matches / len(words)
 
@@ -137,9 +136,16 @@ class Solver:
         """
         self.update_letter_stats()
 
-        scored = dict([(word, self.word_score(word)) for word in self.words])
-        top = sorted(scored.items(), key=lambda item: item[1], reverse=True)
-        return top
+        # NOTE: the sorted function below warrants an explanation. It turns out
+        # this solver was non deterministic because the word list is a set so
+        # after sorting by score sometimes two words with same score would be
+        # swapped. By sorting on (score, word) (ie: a two pass sort but in one
+        # pass) the suggestion list is now stable so this is now deterministic.
+
+        suggestions = [(word, self.word_score(word)) for word in self.words]
+        suggestions = sorted(suggestions, key=lambda item: (item[1], item[0]), reverse=True)
+
+        return suggestions
 
     def validate_guess(self, word):
         if len(set(word)) != self.wordlen:
