@@ -5,9 +5,15 @@ import argparse
 import re
 import collections
 import itertools
-import readline
 
 Wordle = None
+
+def splice(s, i, c):
+    """
+    replace letter in string as position i
+    aka: s[i] = c
+    """
+    return s[:i] + c + s[i + 1:]
 
 def import_wordle():
     # super hacky, read and parse wordle.py to get the Wordle class
@@ -25,9 +31,10 @@ class Solver:
         self.wordlen = args.len
         self.words = self.read_dict(args.dict, self.wordlen)
         self.first = args.first
-        self.letter_counts = self.count_letters(self.words)
         self.iteration = 0     # what attempt are we on
         self.pattern = ['.'] * self.wordlen
+
+        # self.update_letter_stats()
 
     @property
     def words(self):
@@ -47,7 +54,11 @@ class Solver:
     def read_dict(self, dictfile, wordlen):
         return Wordle.read_dict(dictfile, wordlen)
 
-    def count_letters(self, words):
+    def update_letter_stats(self):
+        self._letter_counts = self.letter_counts(self.words)
+        self._letter_dist = self.letter_distribution(self.words)
+
+    def letter_counts(self, words):
         """
         count number of times each letter occurs in all words
         use set(word) since there are lots of fake words in the dict that skew
@@ -56,15 +67,51 @@ class Solver:
         counts = collections.defaultdict(int)
 
         for word in words:
-            for letter in set(word):
-                counts[letter] += 1
+            for c in word:
+                counts[c] += 1
 
         return counts
 
+    def letter_distribution(self, words):
+        """
+        return a dict with with letter percentages
+        dist['a'][0] = .2 # words that start with 'a' are %20 of the words
+        """
+        def count_matches(words, pattern):
+            ret = 0
+            for word in words:
+                if pattern.match(word):
+                    ret += 1
+            return ret
+
+        dist = collections.defaultdict(lambda: [0] * self.wordlen)
+        words = tuple(sorted(words))
+
+        for i in range(self.wordlen):
+            for c in range(26):
+                c = chr(ord('a') + c)
+
+                pattern = '.' * self.wordlen
+                pattern = splice(pattern, i, c)
+                pattern = re.compile(pattern)
+                matches = count_matches(words, pattern)
+
+                dist[c][i] = matches / len(words)
+
+        return dist
+
     def word_score(self, word):
-        return sum([
-            self.letter_counts[c] for c in set(word)
+        score = sum([
+            self._letter_counts[c] for c in set(word)
         ])
+        # return score
+
+        # how often is the letter in that position in the word
+        per = sum([self._letter_dist[c][i] for i, c in enumerate(word)])
+        per /= self.wordlen # average letter position
+        score *= 1 + per
+
+        return int(score)
 
     def find_matches(self, exact, contains):
         """
@@ -72,7 +119,7 @@ class Solver:
         """
         matches = set()
         exact = re.compile(exact)
-        excludes = [c for c, v in self.letter_counts.items() if v == 0]
+        excludes = [c for c, v in self._letter_counts.items() if v == 0]
 
         for word in self.words:
             if all([
@@ -88,6 +135,8 @@ class Solver:
         """
         some hints of good words to the user
         """
+        self.update_letter_stats()
+
         scored = dict([(word, self.word_score(word)) for word in self.words])
         top = sorted(scored.items(), key=lambda item: item[1], reverse=True)
         return top
@@ -112,8 +161,7 @@ class Solver:
             print(f"{k}: {', '.join([k for k, _ in v])}")
 
     def print_letter_counts(self):
-        counts = self.count_letters(self.words)
-        by_letter = sorted(counts.items())
+        by_letter = sorted(self._letter_counts.items())
 
         print("\nin alphabetical order:\n", end='')
         for l, c in by_letter:
@@ -121,7 +169,7 @@ class Solver:
         print()
 
         # in count order
-        by_count = sorted(counts.items(), key=lambda item: item[1], reverse=True)
+        by_count = sorted(self._letter_counts.items(), key=lambda item: item[1], reverse=True)
 
         print("\nin numerical order:\n", end='')
         for l, c in by_count:
@@ -145,7 +193,7 @@ class Solver:
         """
         ask user to type in response from wordle
         """
-        print("i=letter in word (yellow), o=letter not in word (grey), y=correct spot (green)")
+        print("i=letter in word (yellow), o=letter not in word (grey), e=exact spot (green)")
 
         while True:
             resp = input("server response (5 x ioy): ")
@@ -183,11 +231,11 @@ class Solver:
                 contains += c
                 self.pattern[i] = _elsewhere(self.pattern[i], c)
             elif l == Wordle.LETTER_OUT:
-                self.letter_counts[c] = 0
+                self._letter_counts[c] = 0
             elif l == Wordle.LETTER_EXACT:
                 self.pattern[i] = c
 
-        # excludes = [l for l, c in self.letter_counts.items() if c == 0]
+        # excludes = [l for l, c in self._letter_counts.items() if c == 0]
         # print(f"{self.pattern}, {contains=}, {excludes=}")
 
         exact = ''.join(self.pattern)
@@ -224,7 +272,7 @@ class Solver:
 
         iteration = 0
         self.wordle = Wordle(args)
-        self.wordle.word = args.word
+        self.wordle.word = self.args.word
 
         resp = None
         found_resp = Wordle.LETTER_EXACT * self.wordlen
@@ -248,11 +296,15 @@ class Solver:
     def solve(self):
 
         # solve the provided word without interaction
-        if args.word:
+        if self.args.word:
             self.auto_solve()
             return
 
-        if args.count:
+        if self.args.score:
+            print(f"{args.score}: {self.word_score(args.score)}")
+            return
+
+        if self.args.count:
             self.print_letter_counts()
             return
 
@@ -278,6 +330,7 @@ if __name__ == '__main__':
     parser.add_argument('--len', default=5)
     parser.add_argument('--first', action='store_true', help="show first suggestion and exit")
     parser.add_argument('--count', action='store_true', help="show letter counts")
+    parser.add_argument('--score', metavar='word', help="show word score")
     parser.add_argument('word', nargs='?', help="automate solving of given word")
     args = parser.parse_args()
 
