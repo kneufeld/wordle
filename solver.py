@@ -297,7 +297,12 @@ class Solver:
 
             print(f"round {iteration}: guess: {guess}, resp: {resp}, dict len: {curr_len}, {[v for v,c in suggestions[:5]]}")
 
-        self.make_guess()
+        if self.length == 1:
+            print(f"word is: {self.words.pop()}")
+        else:
+            print("our word list is now empty, we don't know the word")
+
+        return iteration
 
     def solve(self):
 
