@@ -1,13 +1,5 @@
 #!/usr/bin/env python
 
-import pathlib
-import argparse
-import re
-import collections
-import itertools
-import readline
-import random
-
 from .utils import dotdict
 
 class Wordle:
@@ -16,11 +8,8 @@ class Wordle:
     LETTER_OUT   = 'o' # out, not in word
     LETTER_EXACT = 'e' # exact spot
 
-    def __init__(self, args):
-        args = dotdict(args)
-        self.args = args
-        self.wordlen = args.wordlen
-        self.words = self.read_dict(args.dict, self.wordlen)
+    def __init__(self, dictpath, wordlen):
+        self.words = self.read_dict(dictpath, wordlen)
 
     @property
     def words(self):
@@ -30,8 +19,8 @@ class Wordle:
         return self._words
 
     @words.setter
-    def words(self, dictionary):
-        self._words = dictionary
+    def words(self, words):
+        self._words = words
 
     @property
     def length(self):
@@ -46,11 +35,11 @@ class Wordle:
         ])
 
     @classmethod
-    def read_dict(cls, dictfile, wordlen):
-        words = set()
-
-        dictionary = dictfile.open().read().splitlines()
+    def read_dict(cls, dictpath, wordlen):
+        dictionary = dictpath.open().read().splitlines()
         print(f"starting dictionary contains {len(dictionary)} words")
+
+        words = set()
 
         for word in dictionary:
             if all([
@@ -62,6 +51,7 @@ class Wordle:
                 words.add(word)
 
         # logger.debug(f"our word list contains {len(words)}, {wordlen} letter words")
+        assert words, f"our dictionary is empty after reading file: {dictpath}"
         return words
 
     def check_word(self, word, guess):
@@ -71,7 +61,7 @@ class Wordle:
 
         resp = ''
 
-        for i in range(self.wordlen):
+        for i in range(len(word)):
             if guess[i] == word[i]:
                 resp += self.LETTER_EXACT
             elif guess[i] in word:

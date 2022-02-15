@@ -9,6 +9,7 @@ print = Console(color_system='truecolor', highlight=False).print
 
 
 from .wordle import Wordle
+from .utils import dotdict
 
 
 class WordleUI:
@@ -17,30 +18,30 @@ class WordleUI:
     LETTER_OUT   = "[grey]◼[/grey]"
     LETTER_EXACT = "[green]◼[/green]"
 
-    def __init__(self, wordle):
+    def __init__(self, args, wordle):
+        self.args = dotdict(args)
         self.wordle = wordle
         self.rounds = [] # [guess, response]
 
     @property
-    def args(self):
-        return self.wordle.args
-
-    def validate_guess(self, word):
-        if len(word) != self.wordle.wordlen:
-            return "wrong word length"
-
-        if word not in self.wordle.words:
-            return "word not in dictionary"
-
-        return None
+    def wordlen(self):
+        return self.args.wordlen
 
     def get_guess(self):
+        def validate_guess(word):
+            if len(word) != self.wordlen:
+                return "wrong word length"
+
+            if word not in self.wordle.words:
+                return "your guess is not in dictionary"
+
+            return None
 
         while True:
             word = input("what's your guess: ")
             word = word.lower()
 
-            if reason := self.validate_guess(word):
+            if reason := validate_guess(word):
                 print(f"invalid guess: {reason}")
                 continue
 
@@ -101,7 +102,7 @@ class WordleUI:
             self.rounds.append([guess, resp])
             self.show_rounds()
 
-            if resp == Wordle.LETTER_EXACT * self.wordle.wordlen:
+            if resp == Wordle.LETTER_EXACT * self.wordlen:
                 print(f"[bold green]You got it in {len(self.rounds)} tries![/bold green]")
                 self.show_summary()
                 return
@@ -112,14 +113,20 @@ class WordleUI:
 @click.command()
 @click.option('--dict', default='words5.txt', type=click.Path(exists=True, readable=True, path_type=pathlib.Path))
 @click.option('--len', 'wordlen', default=5)
-@click.argument('start_word', required=False) #, text="use this word instead of a random one")
+@click.argument('start_word', required=False) # text="use this word instead of a random one")
 @click.pass_context
 def cli(ctx, *args, **kw):
+    """
+    play a game of wordle
+
+    provide a START_WORD to force a specific one (useful for testing) or
+    omit and a random word from the dictionary file will be chosen.
+    """
     # import pudb; pu.db
 
     try:
-        wordle = Wordle(kw)
-        ui = WordleUI(wordle)
+        wordle = Wordle(kw['dict'], kw['wordlen'])
+        ui = WordleUI(kw, wordle)
         ui.play()
     except KeyboardInterrupt:
         pass

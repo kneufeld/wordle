@@ -1,18 +1,17 @@
 import re
 import collections
-import itertools
 
 from lib.wordle import Wordle
-from lib.utils import splice
+from lib.utils import splice, dotdict
 
 class Solver:
 
     def __init__(self, args):
-        self.args = args
-        self.wordlen = args.wordlen
-        self.words = self.read_dict(args.dict, self.wordlen)
+        args           = dotdict(args)
+        self.wordlen   = args.wordlen
+        self.wordle    = Wordle(args.dict, args.wordlen)
         self.iteration = 0     # what attempt are we on
-        self.pattern = ['.'] * self.wordlen
+        self.pattern   = ['.'] * self.wordlen
 
         self.update_letter_stats()
 
@@ -21,20 +20,21 @@ class Solver:
         """
         current subset of dictionary words that have could be solution
         """
-        return self._words
+        return self.wordle.words
 
     @words.setter
-    def words(self, dictionary):
-        self._words = dictionary
+    def words(self, words):
+        self.wordle.words = words
+        self.update_letter_stats()
 
     @property
     def length(self):
         return len(self.words)
 
-    def read_dict(self, dictfile, wordlen):
-        return Wordle.read_dict(dictfile, wordlen)
-
     def update_letter_stats(self):
+        if not self.words:
+            return
+
         self._letter_counts = self.letter_counts(self.words)
         self._letter_dist = self.letter_distribution(self.words)
 
@@ -111,7 +111,6 @@ class Solver:
         """
         some hints of good words to the user
         """
-        self.update_letter_stats()
 
         # NOTE: the sorted function below warrants an explanation. It turns out
         # this solver was non deterministic because the word list is a set so
@@ -139,44 +138,40 @@ class Solver:
 
         contains = ''
 
-        for i, l in enumerate(resp):
+        for i, r in enumerate(resp):
             c = guess[i]
-            if l == Wordle.LETTER_IN:
+            if r == Wordle.LETTER_IN:
                 contains += c
                 self.pattern[i] = _elsewhere(self.pattern[i], c)
-            elif l == Wordle.LETTER_OUT:
+            elif r == Wordle.LETTER_OUT:
                 self._letter_counts[c] = 0
-            elif l == Wordle.LETTER_EXACT:
+            elif r == Wordle.LETTER_EXACT:
                 self.pattern[i] = c
 
-        # excludes = [l for l, c in self._letter_counts.items() if c == 0]
+        # excludes = [r for r, c in self._letter_counts.items() if c == 0]
         # print(f"{self.pattern}, {contains=}, {excludes=}")
 
         exact = ''.join(self.pattern)
         return exact, contains
 
-    def apply_guess(self, guess, resp):
-        self.iteration += 1
+    def prune_words(self, guess, resp):
+        """
+        given a guess and a wordle response, prune our current
+        word list to exclude impossible answers
+        """
         exact, contains = self.parse_response(guess, resp)
         self.words = self.find_matches(exact, contains)
 
-    def auto_solve(self, word, guesses=None, callback=None):
+    def solve(self, word, guesses=None, callback=None):
         """
         given a word, show the steps the solver takes to find it
         """
-
         self.iteration = 0
-        self.wordle = Wordle(self.args)
 
-        resp = None
-        found_resp = Wordle.LETTER_EXACT * self.wordlen
-
-        # doing this more complicated test instead of just self.length > 1
-        # so that we show the last guess instead of breaking out of loop
-        # one iteration too soon
-        while (resp != found_resp) and (self.length > 0):
-            curr_len = self.length
-            suggestions = self.get_suggestions()
+        while self.length >= 1:
+            self.iteration += 1
+            curr_len        = self.length
+            suggestions     = self.get_suggestions()
 
             if guesses:
                 guess = guesses.pop(0)
@@ -184,7 +179,7 @@ class Solver:
                 guess = suggestions[0][0]
 
             resp = self.wordle.check_word(word, guess)
-            self.apply_guess(guess, resp)
+            self.prune_words(guess, resp)
 
             if callback:
                 callback(

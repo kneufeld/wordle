@@ -25,7 +25,6 @@ class SolverUI:
 
         self.solver = Solver(args)
         self.wordlen = args.wordlen
-        self.iteration = 0     # what attempt are we on
         self.pattern = ['.'] * self.wordlen
 
     def print_group(self, words, n=10):
@@ -100,17 +99,17 @@ class SolverUI:
         guess       = kw['guess']
         resp        = kw['resp']
 
+        found_resp = Wordle.LETTER_EXACT * self.wordlen
         guess = colorize(guess, resp)
         print(f"round {iteration}: guess: {guess}, resp: {resp}, dict len: {curr_len}, {[v for v,c in suggestions[:5]]}")
 
-        if len(suggestions) == 1:
+        if resp == found_resp:
             print(f"word is: {words.pop()}")
-        elif len(suggestions) == 0:
+        elif len(words) == 0:
             print("our word list is now empty, we don't know the word")
 
 
     def make_guess(self):
-        self.iteration += 1
         length = self.solver.length
 
         if length == 1:
@@ -124,27 +123,30 @@ class SolverUI:
         print(f"current word list length: {length}")
 
         suggestions = self.solver.get_suggestions()
-        self.print_group(suggestions, 10)
-
-        if self.args.first:
-            raise SystemExit
+        self.print_group(suggestions, 5)
 
         guess = self.get_guess()
         resp = self.get_response()
-        self.solver.make_guess(guess, resp)
+        self.solver.prune_words(guess, resp)
 
     def solve(self):
 
         # solve the provided word without interaction
         if self.args.word:
-            word = self.args.word.pop(0)
-            self.solver.auto_solve(word, self.args.word, self.cb_iteration)
+            word = self.args.word
+            guesses = self.args.gusses
+            self.solver.solve(word, guesses, self.cb_iteration)
             return
 
         if self.args.score:
             word = self.args.score
             word_score = int(self.solver.word_score(word))
             print(f"{word}: {word_score}")
+            return
+
+        if self.args.first:
+            suggestions = self.solver.get_suggestions()
+            self.print_group(suggestions, 10)
             return
 
         if self.args.count:
@@ -156,14 +158,21 @@ class SolverUI:
 
 
 @click.command()
-@click.option('--dict', default='words5.txt', type=pathlib.Path)
+@click.option('--dict', default='words5.txt', type=click.Path(exists=True, readable=True, path_type=pathlib.Path))
 @click.option('--len', 'wordlen', default=5, type=int)
 @click.option('--first', is_flag=True, help="show first suggestion and exit")
 @click.option('--count', is_flag=True, help="show letter counts")
 @click.option('--score', metavar='word', help="show word score")
-@click.argument('word', required=False, nargs=-1, callback=to_list) # help="automate solving of given word")
+@click.argument('word', required=False, nargs=1)
+@click.argument('guesses', required=False, nargs=-1, callback=to_list)
 @click.pass_context
 def cli(ctx, *_, **args):
+    """
+    solve a Wordle puzzle
+
+    pass in WORD to show steps solver would use to find the given word. Provide
+    optional GUESSES to force solver to use those words instead of its "best" guess.
+    """
 
     try:
         solver = SolverUI(args)
