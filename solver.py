@@ -7,6 +7,8 @@ import collections
 import itertools
 
 Wordle = None
+from rich.console import Console
+print = Console(color_system='truecolor', highlight=False).print
 
 def splice(s, i, c):
     """
@@ -274,6 +276,19 @@ class Solver:
         """
         given a word, show the steps the solver takes to find it
         """
+        def _colorize(guess, resp):
+            resp = list(resp)
+            for i, c in enumerate(resp):
+                g = guess[i]
+                if c == Wordle.LETTER_IN:
+                    resp[i] = f"[bold dark_goldenrod]{g}[/bold dark_goldenrod]"
+                elif c == Wordle.LETTER_OUT:
+                    resp[i] = f"[grey]{g}[/grey]"
+                elif c == Wordle.LETTER_EXACT:
+                    resp[i] = f"[green]{g}[/green]"
+
+            # print(f"{resp=}", highlight=False, markup=False)
+            return ''.join(resp)
 
         iteration = 0
         self.wordle = Wordle(args)
@@ -294,6 +309,7 @@ class Solver:
             exact, contains = self.parse_response(guess, resp)
             self.words = self.find_matches(exact, contains)
 
+            guess = _colorize(guess, resp)
             print(f"round {iteration}: guess: {guess}, resp: {resp}, dict len: {curr_len}, {[v for v,c in suggestions[:5]]}")
 
         if self.length == 1:
