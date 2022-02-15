@@ -4,27 +4,27 @@ My implementation of https://www.powerlanguage.co.uk/wordle/
 
 ## Installation
 
-The only dependency is `rich`, so therefore `pip install rich`. But as always
-use a [virtual env](https://docs.python.org/3/tutorial/venv.html).
+Make a [virtual env](https://docs.python.org/3/tutorial/venv.html) and then run
+`pip install -e .`
 
-## wordle.py
+## wordle
 
 This is the _"game engine"_.
 
-* `wordle.py --help` for a few options
-* `wordle.py` and follow the prompts.
-* `wordle.py word` to force a word instead of a random one.
+* `wordle --help` for a few options
+* `wordle` and follow the prompts.
+* `wordle word` to force a word instead of a random one.
 
-## solver.py
+## solver
 
 This will make suggestions to help solve a wordle puzzle interactively
 when the word is not known, or it can show the steps of solving a puzzle
 if the word is already known.
 
-* `solver.py` follow the prompts
-* `solver.py the_word` to automate finding the given word
-* `solver.py --first` make a suggestion for the first word and exit
-* `solver.py --count` show letter distributions and exit
+* `solver` follow the prompts
+* `solver the_word` to automate finding the given word
+* `solver --first` make a suggestion for the first word and exit
+* `solver --count` show letter distributions and exit
 
 Inputting the server response is kinda crappy.
 
