@@ -14,6 +14,9 @@ from lib.wordle import Wordle
 from lib.utils import dotdict, colorize
 from lib.solver import Solver
 
+def to_list(ctx, param, value):
+    return list(value)
+
 class SolverUI:
 
     def __init__(self, args):
@@ -100,9 +103,9 @@ class SolverUI:
         guess = colorize(guess, resp)
         print(f"round {iteration}: guess: {guess}, resp: {resp}, dict len: {curr_len}, {[v for v,c in suggestions[:5]]}")
 
-        if len(words) == 1:
+        if len(suggestions) == 1:
             print(f"word is: {words.pop()}")
-        elif len(words) == 0:
+        elif len(suggestions) == 0:
             print("our word list is now empty, we don't know the word")
 
 
@@ -134,7 +137,8 @@ class SolverUI:
 
         # solve the provided word without interaction
         if self.args.word:
-            self.solver.auto_solve(self.args.word, self.cb_iteration)
+            word = self.args.word.pop(0)
+            self.solver.auto_solve(word, self.args.word, self.cb_iteration)
             return
 
         if self.args.score:
@@ -157,7 +161,7 @@ class SolverUI:
 @click.option('--first', is_flag=True, help="show first suggestion and exit")
 @click.option('--count', is_flag=True, help="show letter counts")
 @click.option('--score', metavar='word', help="show word score")
-@click.argument('word', required=False) # help="automate solving of given word")
+@click.argument('word', required=False, nargs=-1, callback=to_list) # help="automate solving of given word")
 @click.pass_context
 def cli(ctx, *_, **args):
 

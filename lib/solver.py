@@ -155,12 +155,12 @@ class Solver:
         exact = ''.join(self.pattern)
         return exact, contains
 
-    def make_guess(self, guess, resp):
+    def apply_guess(self, guess, resp):
         self.iteration += 1
         exact, contains = self.parse_response(guess, resp)
         self.words = self.find_matches(exact, contains)
 
-    def auto_solve(self, word, callback=None):
+    def auto_solve(self, word, guesses=None, callback=None):
         """
         given a word, show the steps the solver takes to find it
         """
@@ -177,11 +177,14 @@ class Solver:
         while (resp != found_resp) and (self.length > 0):
             curr_len = self.length
             suggestions = self.get_suggestions()
-            guess = suggestions[0][0]
+
+            if guesses:
+                guess = guesses.pop(0)
+            else:
+                guess = suggestions[0][0]
+
             resp = self.wordle.check_word(word, guess)
-            self.make_guess(guess, resp)
-            exact, contains = self.parse_response(guess, resp)
-            self.words = self.find_matches(exact, contains)
+            self.apply_guess(guess, resp)
 
             if callback:
                 callback(
