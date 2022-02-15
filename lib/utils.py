@@ -7,7 +7,7 @@ def splice(s, i, c):
 
 class dotdict(dict):
     """dot.notation access to dictionary attributes"""
-    __getattr__ = dict.get
+    __getattr__ = lambda self, key: self[key]
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 

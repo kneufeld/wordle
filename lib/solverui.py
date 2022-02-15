@@ -134,7 +134,7 @@ class SolverUI:
         # solve the provided word without interaction
         if self.args.word:
             word = self.args.word
-            guesses = self.args.gusses
+            guesses = self.args.guesses
             self.solver.solve(word, guesses, self.cb_iteration)
             return
 
