@@ -6,17 +6,17 @@ import re
 import collections
 import itertools
 
-Wordle = None
 from rich.console import Console
 print = Console(color_system='truecolor', highlight=False).print
 
 def splice(s, i, c):
     """
-    replace letter in string as position i
+    replace letter in string at position i
     aka: s[i] = c
     """
     return s[:i] + c + s[i + 1:]
 
+Wordle = None
 def import_wordle():
     # super hacky, read and parse wordle.py to get the Wordle class
     # so we can use its read_dict method. Gotta be DRY.
@@ -63,8 +63,6 @@ class Solver:
     def letter_counts(self, words):
         """
         count number of times each letter occurs in all words
-        use set(word) since there are lots of fake words in the dict that skew
-        the results, eg. esses
         """
         counts = collections.defaultdict(int)
 
@@ -148,12 +146,6 @@ class Solver:
 
         return suggestions
 
-    def validate_guess(self, word):
-        if len(set(word)) != self.wordlen:
-            return False
-
-        return True
-
     def print_group(self, words, n=10):
         if not n:
             n = len(words)
@@ -183,14 +175,15 @@ class Solver:
             print(f"{l}: {c}", end=', ')
         print()
 
-
     def get_guess(self):
+        def validate_guess(self, word):
+            return len(word) == self.wordlen
 
         while True:
             word = input("what's your guess: ")
             word = word.lower()
 
-            if not self.validate_guess(word):
+            if not validate_guess(word):
                 print("invalid guess, try again")
                 continue
 
