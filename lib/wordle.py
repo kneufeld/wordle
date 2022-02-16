@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-
-from .utils import dotdict
 
 class Wordle:
 

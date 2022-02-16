@@ -1,7 +1,4 @@
 import pathlib
-import argparse
-import re
-import collections
 import itertools
 
 import click
@@ -11,7 +8,8 @@ _print = print
 print = Console(color_system='truecolor', highlight=False).print
 
 from lib.wordle import Wordle
-from lib.utils import dotdict, colorize
+from lib.wordleui import WordleUI
+from lib.utils import dotdict
 from lib.solver import Solver
 
 def to_list(ctx, param, value):
@@ -21,11 +19,10 @@ class SolverUI:
 
     def __init__(self, args):
         args = dotdict(args)
-        self.args = args
 
-        self.solver = Solver(args)
+        self.args    = args
+        self.solver  = Solver(args)
         self.wordlen = args.wordlen
-        self.pattern = ['.'] * self.wordlen
 
     def print_group(self, words, n=10):
         if not n:
@@ -82,7 +79,7 @@ class SolverUI:
             # print(f"{resp=}")
 
             if not all([
-                len(resp) == 5,
+                len(resp) == self.wordlen,
                 set(resp) <= Wordle.response_set(), # resp is subset of response set
             ]):
                 print("invalid response, must be one of ioe 5 times")
@@ -92,6 +89,7 @@ class SolverUI:
                 return resp
 
     def cb_iteration(self, *args, **kw):
+        # KN: yes, I know this is very hacky but it's expedient
         iteration   = kw['iteration']
         words       = kw['words']
         curr_len    = kw['curr_len']
@@ -100,8 +98,9 @@ class SolverUI:
         resp        = kw['resp']
 
         found_resp = Wordle.LETTER_EXACT * self.wordlen
-        guess = colorize(guess, resp)
-        print(f"round {iteration}: guess: {guess}, resp: {resp}, dict len: {curr_len}, {[v for v,c in suggestions[:5]]}")
+        _guess = WordleUI.colorize_word(resp, guess)
+        _resp = WordleUI.colorize_word(resp, resp)
+        print(f"round {iteration}: guess: {_guess}, resp: {_resp}, dict len: {curr_len}, {[v for v,c in suggestions[:5]]}")
 
         if resp == found_resp:
             print(f"word is: {words.pop()}")

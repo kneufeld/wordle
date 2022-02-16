@@ -7,7 +7,8 @@ from lib.utils import splice, dotdict
 class Solver:
 
     def __init__(self, args):
-        args           = dotdict(args)
+        args = dotdict(args)
+
         self.wordlen   = args.wordlen
         self.wordle    = Wordle(args.dict, args.wordlen)
         self.iteration = 0     # what attempt are we on

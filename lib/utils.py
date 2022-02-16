@@ -11,21 +11,12 @@ class dotdict(dict):
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
-def colorize(guess, resp):
-    """
-    return a rich compatible string of the guess
-    """
-    from .wordle import Wordle
+# from https://stackoverflow.com/questions/128573/using-property-on-classmethods/64738850#64738850
+# Python 3.9 allows @classmethod then @property on a method
+class classproperty(object):
 
-    resp = list(resp)
-    for i, c in enumerate(resp):
-        g = guess[i]
-        if c == Wordle.LETTER_IN:
-            resp[i] = f"[bold dark_goldenrod]{g}[/bold dark_goldenrod]"
-        elif c == Wordle.LETTER_OUT:
-            resp[i] = f"[grey]{g}[/grey]"
-        elif c == Wordle.LETTER_EXACT:
-            resp[i] = f"[green]{g}[/green]"
+    def __init__(self, fget):
+        self.fget = fget
 
-    # print(f"{resp=}", highlight=False, markup=False)
-    return ''.join(resp)
+    def __get__(self, owner_self, owner_cls):
+        return self.fget(owner_cls)

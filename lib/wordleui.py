@@ -3,24 +3,52 @@ import random
 
 import click
 
+from .wordle import Wordle
+from .utils import dotdict
+
 from rich.console import Console
 _print = print
 print = Console(color_system='truecolor', highlight=False).print
 
 
-from .wordle import Wordle
-from .utils import dotdict
-
-
 class WordleUI:
 
-    LETTER_IN    = "[bold dark_goldenrod]◼[/bold dark_goldenrod]"
-    LETTER_OUT   = "[grey]◼[/grey]"
-    LETTER_EXACT = "[green]◼[/green]"
+    # KN: all this might be a little too DRY...
 
-    def __init__(self, args, wordle):
-        self.args = dotdict(args)
-        self.wordle = wordle
+    EMOJI_IN     = '🟨'
+    EMOJI_OUT    = '⬜'
+    EMOJI_EXACT  = '🟩'
+
+    @classmethod
+    def colorize(cls, code, text):
+        """
+        colorize text using rich color tags
+        code: a Wordle.LETTER_X response
+        text: the text to wrap with color tags
+        """
+        if code == Wordle.LETTER_IN:
+            color = 'bold dark_goldenrod'
+        elif code == Wordle.LETTER_OUT:
+            color = 'grey'
+        elif code == Wordle.LETTER_EXACT:
+            color = 'green'
+        else:
+            raise RuntimeError(f"unknown code: {code}")
+
+        return f"[{color}]{text}[/{color}]"
+
+    @classmethod
+    def colorize_word(cls, resp, word):
+        return ''.join([
+            cls.colorize(r, w)
+            for r, w in zip(resp, word)
+        ])
+
+    def __init__(self, args):
+        args = dotdict(args)
+
+        self.args   = args
+        self.wordle = Wordle(args.dict, args.wordlen)
         self.rounds = [] # [guess, response]
 
     @property
@@ -49,14 +77,7 @@ class WordleUI:
 
     def print_response(self, resp):
         for c in resp:
-            if c == Wordle.LETTER_IN:
-                print(WordleUI.LETTER_IN, end=' ')
-            elif c == Wordle.LETTER_OUT:
-                print(WordleUI.LETTER_OUT, end=' ')
-            elif c == Wordle.LETTER_EXACT:
-                print(WordleUI.LETTER_EXACT, end=' ')
-            else:
-                print(f"unknown letter in response: {c}")
+            print(WordleUI.colorize(c, '◼'), end=' ')
         print()
 
     def print_guess(self, guess):
@@ -125,8 +146,7 @@ def cli(ctx, *args, **kw):
     # import pudb; pu.db
 
     try:
-        wordle = Wordle(kw['dict'], kw['wordlen'])
-        ui = WordleUI(kw, wordle)
+        ui = WordleUI(kw)
         ui.play()
     except KeyboardInterrupt:
         pass
