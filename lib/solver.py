@@ -90,13 +90,12 @@ class Solver:
 
         return score
 
-    def find_matches(self, exact, contains):
+    def find_matches(self, exact, contains, excludes):
         """
         "exact" is a bit of a misnomer, it's anything or exact
         """
         matches = set()
         exact = re.compile(exact)
-        excludes = [c for c, v in self._letter_counts.items() if v == 0]
 
         for word in self.words:
             if all([
@@ -138,6 +137,7 @@ class Solver:
             return f"[^{chars}{c}]"
 
         contains = ''
+        excludes = ''
 
         for i, r in enumerate(resp):
             c = guess[i]
@@ -145,23 +145,20 @@ class Solver:
                 contains += c
                 self.pattern[i] = _elsewhere(self.pattern[i], c)
             elif r == Wordle.LETTER_OUT:
-                self._letter_counts[c] = 0
+                excludes += c
             elif r == Wordle.LETTER_EXACT:
                 self.pattern[i] = c
 
-        # excludes = [r for r, c in self._letter_counts.items() if c == 0]
-        # print(f"{self.pattern}, {contains=}, {excludes=}")
-
         exact = ''.join(self.pattern)
-        return exact, contains
+        return exact, contains, excludes
 
     def prune_words(self, guess, resp):
         """
         given a guess and a wordle response, prune our current
         word list to exclude impossible answers
         """
-        exact, contains = self.parse_response(guess, resp)
-        self.words = self.find_matches(exact, contains)
+        exact, contains, excludes = self.parse_response(guess, resp)
+        self.words = self.find_matches(exact, contains, excludes)
 
     def solve(self, word, guesses=None, callback=None):
         """
