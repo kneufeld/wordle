@@ -15,9 +15,9 @@ class WordleUI:
 
     # KN: all this might be a little too DRY...
 
-    EMOJI_IN     = '🟨'
-    EMOJI_OUT    = '⬜'
-    EMOJI_EXACT  = '🟩'
+    EMOJI_IN    = ['🟨']
+    EMOJI_OUT   = ['⬜', '⬛']
+    EMOJI_EXACT = ['🟩']
 
     @classmethod
     def colorize(cls, code, text):
