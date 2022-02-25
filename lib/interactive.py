@@ -7,9 +7,9 @@ import re
 
 import click
 
-from rich.console import Console
-_print = print
-print = Console(color_system='truecolor', highlight=False).print
+# some environments have a 1 sec delay after hitting esc key
+import os
+os.environ.setdefault('ESCDELAY', '25')
 
 from lib.wordle import Wordle
 from lib.wordleui import WordleUI
@@ -65,9 +65,12 @@ def get_input(win, pattern, excludes):
     elif c in [127, curses.KEY_BACKSPACE]:
         pattern = pattern[0:-1]
     elif c in [10, curses.KEY_ENTER]:
+        pass
         # exit on enter if last character
-        if len(pattern) == wordlen:
-            raise KeyboardInterrupt
+        # if len(pattern) == wordlen:
+        #     raise KeyboardInterrupt
+    elif c in [27]: # ESC
+        raise KeyboardInterrupt
     elif c in [3, 26]:                  # ctrl-c, ctrl-z
         win.addstr('ctrl-c')
         raise KeyboardInterrupt
