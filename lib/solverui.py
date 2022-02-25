@@ -53,6 +53,15 @@ class SolverUI:
             print(f"{l}: {c}", end=', ')
         print()
 
+    def print_letter_dist(self, letter):
+        dist = self.solver.letter_distribution(self.solver.words)
+
+        print(f"{letter}: ", end='')
+
+        for p in dist[letter]:
+            print(f"{(p*100):.2f}%", end=' ')
+        print()
+
     def get_guess(self):
         def validate_guess(word):
             return len(word) == self.wordlen
@@ -152,6 +161,10 @@ class SolverUI:
             self.print_letter_counts()
             return
 
+        if self.args.pos:
+            self.print_letter_dist(self.args.pos)
+            return
+
         while True:
             self.make_guess()
 
@@ -162,6 +175,7 @@ class SolverUI:
 @click.option('--first', is_flag=True, help="show first suggestion and exit")
 @click.option('--count', is_flag=True, help="show letter counts")
 @click.option('--score', metavar='word', help="show word score")
+@click.option('--pos', metavar='letter', help="show distribution of letter")
 @click.argument('word', required=False, nargs=1)
 @click.argument('guesses', required=False, nargs=-1, callback=to_list)
 @click.pass_context
