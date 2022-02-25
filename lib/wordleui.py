@@ -132,7 +132,7 @@ class WordleUI:
         self.show_summary()
 
 @click.command()
-@click.option('--dict', default='words5.txt', type=click.Path(exists=True, readable=True, path_type=pathlib.Path))
+@click.option('--dict', default='dictionary.txt', type=click.Path(exists=True, readable=True, path_type=pathlib.Path))
 @click.option('--len', 'wordlen', default=5)
 @click.argument('start_word', required=False) # text="use this word instead of a random one")
 @click.pass_context

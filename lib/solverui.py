@@ -157,7 +157,7 @@ class SolverUI:
 
 
 @click.command()
-@click.option('--dict', default='words5.txt', type=click.Path(exists=True, readable=True, path_type=pathlib.Path))
+@click.option('--dict', default='dictionary.txt', type=click.Path(exists=True, readable=True, path_type=pathlib.Path))
 @click.option('--len', 'wordlen', default=5, type=int)
 @click.option('--first', is_flag=True, help="show first suggestion and exit")
 @click.option('--count', is_flag=True, help="show letter counts")
