@@ -12,9 +12,6 @@ import os
 os.environ.setdefault('ESCDELAY', '25')
 
 from lib.wordle import Wordle
-from lib.wordleui import WordleUI
-from lib.utils import dotdict
-from lib.solver import Solver
 
 def to_list(ctx, param, value):
     return list(value)
@@ -56,26 +53,30 @@ def get_input(win, pattern, excludes):
     c = win.getch() # retuns int, getkey returns str
     # win.addstr(f"{c=}")
 
-    if c in list(range(ord('a'), ord('z'))) + [ord('.')]:
+
+    if chr(c) in 'abcdefghijklmnopqrstuvwxyz.':
         c = chr(c)
         pattern += c
+
+        win_debug.clear()
+        win_debug.refresh()
     elif c == ord('!'):
         c = win.getkey()
         excludes += c
     elif c in [127, curses.KEY_BACKSPACE]:
         pattern = pattern[0:-1]
-    elif c in [10, curses.KEY_ENTER]:
-        pass
-        # exit on enter if last character
-        # if len(pattern) == wordlen:
-        #     raise KeyboardInterrupt
-    elif c in [27]: # ESC
+    # elif c in [10, curses.KEY_ENTER]:
+    #     # exit on enter if last character
+    #     if len(pattern) == wordlen:
+    #         raise KeyboardInterrupt
+    elif c in [27]:                     # esc
         raise KeyboardInterrupt
     elif c in [3, 26]:                  # ctrl-c, ctrl-z
-        win.addstr('ctrl-c')
         raise KeyboardInterrupt
     else:
-        win.addstr(str(c))
+        win_debug.clear()
+        win_debug.addstr(f"key code: {str(c)}")
+        win_debug.refresh()
 
     win.refresh()
 
@@ -120,7 +121,10 @@ def interactive(stdscr, args):
     win_pattern = curses.newwin(1, cols // 2, 0, 0)
     win_excludes = curses.newwin(1, cols // 2, 0, cols // 2)
     win_matches = curses.newwin(rows - 4, cols, 2, 0)
-    win_counts = curses.newwin( 1, cols, rows - 1, 0) # last row
+    win_counts = curses.newwin( 1, cols // 2, rows - 1, 0) # last row
+
+    global win_debug
+    win_debug = curses.newwin( 1, cols // 2, rows - 1, cols // 2) # last row
 
     try:
         excludes = args['excludes']
