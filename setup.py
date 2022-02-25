@@ -14,6 +14,8 @@ setup(
         'console_scripts': [
             'wordle = lib.wordleui:cli',
             'solver = lib.solverui:cli',
+            'reverser = lib.reverseui:cli',
+            'interactive = lib.interactive:cli',
         ],
     },
 )
