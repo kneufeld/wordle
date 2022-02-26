@@ -9,6 +9,7 @@ setup(
     install_requires=[
         'click',
         'rich',
+        'urwid',
     ],
     entry_points={
         'console_scripts': [
