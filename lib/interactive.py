@@ -100,7 +100,7 @@ def pattern_match(words, pattern, excludes):
 
 def update_excludes_win(win, excludes):
     win.clear()
-    win.addstr(f"excludes: {excludes}")
+    win.addstr(f"excludes (!c): {excludes}")
     win.refresh()
 
 def update_count_win(win, words):
