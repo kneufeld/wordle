@@ -1,5 +1,4 @@
 import pathlib
-import itertools
 import curses
 import re
 import asyncio
@@ -7,15 +6,16 @@ import string
 import functools
 
 import click
-
 import urwid
+from blinker import signal
 
 import logging
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 logging.getLogger('asyncio').setLevel(logging.WARNING)
 logger = logging.getLogger()
 
-from blinker import signal
+from lib.wordle import Wordle
+
 
 class Signals:
 
@@ -35,98 +35,6 @@ class Signals:
 signals = Signals()
 
 
-from lib.wordle import Wordle
-
-
-def get_input(win, pattern, excludes):
-
-    win.clear()
-    win.move(0, 0)
-    win.addstr(f"pattern: {pattern}") # this updates cursor pos
-
-    # y, x = win.getyx()
-    # win.addstr(f"{y=} {x=}")
-
-    c = win.getch() # retuns int, getkey returns str
-    # win.addstr(f"{c=}")
-
-    if chr(c) in 'abcdefghijklmnopqrstuvwxyz.':
-        c = chr(c)
-        pattern += c
-
-        win_debug.clear()
-        win_debug.refresh()
-    elif c == ord('!'):
-        c = win.getkey()
-        excludes += c
-    elif c in [127, curses.KEY_BACKSPACE]:
-        pattern = pattern[0:-1]
-    # elif c in [10, curses.KEY_ENTER]:
-    #     # exit on enter if last character
-    #     if len(pattern) == wordlen:
-    #         raise KeyboardInterrupt
-    elif c in [27]:                     # esc
-        raise KeyboardInterrupt
-    elif c in [3, 26]:                  # ctrl-c, ctrl-z
-        raise KeyboardInterrupt
-    else:
-        win_debug.clear()
-        win_debug.addstr(f"key code: {str(c)}")
-        win_debug.refresh()
-
-    win.refresh()
-
-    return pattern, excludes
-
-def update_excludes_win(win, excludes):
-    win.clear()
-    win.addstr(f"excludes (!c): {excludes}")
-    win.refresh()
-
-def update_count_win(win, words):
-    win.clear()
-    win.addstr(f"word count: {len(words)}")
-    win.refresh()
-
-def interactive(stdscr, args):
-
-    wordle = Wordle(args['dict'], args['wordlen'])
-    dictionary = wordle.words
-
-    # curses.echo()
-    stdscr.clear()
-    stdscr.refresh()
-
-    rows, cols = stdscr.getmaxyx()
-    win_pattern = curses.newwin(1, cols // 2, 0, 0)
-    win_excludes = curses.newwin(1, cols // 2, 0, cols // 2)
-    win_matches = curses.newwin(rows - 4, cols, 2, 0)
-    win_counts = curses.newwin( 1, cols // 2, rows - 1, 0) # last row
-
-    global win_debug
-    win_debug = curses.newwin( 1, cols // 2, rows - 1, cols // 2) # last row
-
-    try:
-        excludes = args['excludes']
-        pattern = ''
-        matches = pattern_match(dictionary, pattern, excludes)
-
-        update_count_win(win_counts, matches)
-        update_excludes_win(win_excludes, excludes)
-
-        while True:
-            pattern, excludes = get_input(win_pattern, pattern, excludes)
-            matches = pattern_match(dictionary, pattern, excludes)
-            update_excludes_win(win_excludes, excludes)
-            update_count_win(win_counts, matches)
-            show_matches(win_matches, pattern, matches)
-
-    except KeyboardInterrupt:
-        pass
-
-    # stdscr.getkey()
-
-
 
 class Window(urwid.WidgetWrap):
     def __init__(self, *args, **kw):
@@ -139,18 +47,22 @@ class Window(urwid.WidgetWrap):
 
     @property
     def original_widget(self):
+        # return what's inside the LineBox
         return self._w
+
 
 class WinPattern(Window):
     def __init__(self, *args, **kw):
         label = urwid.Text('pattern:')
-        input = urwid.Padding(urwid.AttrMap(
-            urwid.Edit('', '', multiline=False, *args, **kw),
-            'default', 'editing'))
+        input = urwid.AttrMap(
+            urwid.Edit('', '', multiline=False, align='left', wrap='clip',),
+            'default', 'focused')
         widget = urwid.Columns([
-                ("weight", 1, label),
-                ("weight", 3, input),
-            ], dividechars=-1)
+                (10, label),
+                (6, input),
+                ('weight', 2, urwid.Padding(urwid.Text(''))),
+        ], dividechars=-1)
+
         super().__init__(widget)
 
         self.prev = ''
@@ -163,7 +75,7 @@ class WinPattern(Window):
             return
 
         if self.prev == '!':
-            signals.exclude_change.send('append', data=key)
+            signals.exclude_change.send('exclude', data=key)
             self.prev = ''
             return
 
@@ -171,7 +83,7 @@ class WinPattern(Window):
             self.text = self.text[:-1]
             return
 
-        # handle the keypress if lowercase or .!
+        # propagate keypress if not a letter or .
         if key not in string.ascii_lowercase + '.':
             return key
 
@@ -181,19 +93,20 @@ class WinPattern(Window):
         self.prev = key
 
     @property
-    def edit_widget(self):
-        return self.original_widget.original_widget.contents[1][0].original_widget.original_widget
+    def widget(self):
+        return self.original_widget.original_widget.contents[1][0].original_widget
 
     @property
     def text(self):
-        return self.edit_widget.get_edit_text()
+        return self.widget.get_edit_text()
 
     @text.setter
     def text(self, text):
-        self.edit_widget.set_edit_text(text)
-        self.edit_widget.edit_pos = 100 # end
+        self.widget.set_edit_text(text)
+        self.widget.edit_pos = 100 # end
 
         signals.pattern_change.send('pattern', data=self.text)
+
 
 class WinExcludes(Window):
     def __init__(self, *args, **kw):
@@ -221,19 +134,19 @@ class WinExcludes(Window):
     def text(self, text):
         self.widget.set_text(self.text + text)
 
+
 class WinMatches(Window):
 
     def __init__(self, *args, **kw):
         super().__init__(
             urwid.Filler(
-                urwid.Text('matches'),
+                urwid.Text('. is a wildcard\n! to exclude a letter'),
                 valign='top',
             )
         )
 
-        self.dictionary = []
-        self.pattern = ''
-        self.excludes = ''
+        self._pattern = ''
+        self._excludes = ''
 
         signals.dict_loaded.connect(
             functools.partial(self.cb_dict_loaded), weak=False
@@ -259,9 +172,9 @@ class WinMatches(Window):
     def text(self, value):
         return self.widget.set_text(value)
 
-    def cb_dict_loaded(self, sender, **kw):
+    def cb_dict_loaded(self, sender, data):
         logger.info("loaded dictionary")
-        self.dictionary = kw['data']
+        self.dictionary = data
 
     def cb_pattern(self, sender, data):
         # logger.info(f"match pattern: {data}")
@@ -269,6 +182,7 @@ class WinMatches(Window):
 
     def cb_exclude(self, sender, data):
         self.excludes += data
+        self.dictionary = self.pattern_match(self.dictionary, '.' * wordlen, self.excludes)
 
     @property
     def dictionary(self):
@@ -276,9 +190,8 @@ class WinMatches(Window):
 
     @dictionary.setter
     def dictionary(self, value):
-        logger.debug(f"dictionary={len(value)} words")
+        logger.debug(f"dictionary has {len(value)} words")
         self._dictionary = sorted(value)
-        self.words = self.dictionary
 
     @property
     def words(self):
@@ -291,13 +204,12 @@ class WinMatches(Window):
 
         if self.pattern:
             self.text = ' '.join(self.words)
+        else:
+            self.text = ''
 
     @property
     def pattern(self):
-        try:
-            return self._pattern
-        except AttributeError:
-            return ''
+        return self._pattern
 
     @pattern.setter
     def pattern(self, value):
@@ -317,15 +229,11 @@ class WinMatches(Window):
 
     def recalc(self):
         logger.debug("recalculating wordlist")
-        signals.wordlist_change.send('wordlist', data=self.words)
 
-        if not self.pattern:
-            self.text = ''
+        if self.pattern:
+            self.words = self.pattern_match(self.dictionary, self.pattern, self.excludes)
+        else:
             self.words = self.dictionary
-            return
-
-        matches = self.pattern_match(self.words, self.pattern, self.excludes)
-        self.words = matches
 
     def pattern_match(self, words, pattern, excludes):
         if not pattern:
@@ -353,6 +261,7 @@ class WinCounts(Window):
         )
         super().__init__(widget, title='Word Count', title_align='left')
 
+        signals.dict_loaded.connect(functools.partial(self.cb_wordlist), weak=False)
         signals.wordlist_change.connect(functools.partial(self.cb_wordlist), weak=False)
 
     @property
@@ -361,6 +270,7 @@ class WinCounts(Window):
 
     def cb_wordlist(self, sender, data):
         self.widget.set_text(str(len(data)))
+
 
 class WinLogging(Window):
 
@@ -372,6 +282,7 @@ class WinLogging(Window):
             ),
             title="Logging", title_align='left', tlcorner='┬', blcorner='┴',
         )
+
 
 class MainFrame(urwid.Frame):
     def __init__(self, app, *args, **kw):
@@ -404,13 +315,6 @@ class MainFrame(urwid.Frame):
             ("weight", 2, win_logging),
         ], dividechars=-1)
 
-        signals.pattern_change.connect(functools.partial(self.cb_signal_fired), weak=False)
-        signals.exclude_change.connect(functools.partial(self.cb_signal_fired), weak=False)
-
-    def cb_signal_fired(self, sender, **kw):
-        # logger.debug(f"{sender=} value={kw['data']}")
-        pass
-
     @property
     def win_logging(self):
         return self.footer.contents[1][0].original_widget.original_widget
@@ -430,6 +334,7 @@ class MainFrame(urwid.Frame):
         """
         super().set_body(widget)
 
+
 class App:
 
     def __init__(self, args):
@@ -439,8 +344,6 @@ class App:
 
         self.frame = MainFrame(self, focus_part='header')
         replace_handlers(logger, self.frame.win_logging)
-
-        # self.frame.win_global.set_text("(Q)uit (N)ext (P)rev")
 
         # load and send dictionary to listeners
         wordle = Wordle(self.args['dict'], self.args['wordlen'])
@@ -452,7 +355,7 @@ class App:
             # standout is usually displayed with foreground and background reversed
             ('unfocused', 'default', '', '', '', ''),
             ('focused', 'light gray', 'dark blue', '', '#ffd', '#00a'),
-            ('editing', 'black,underline', 'light gray', 'standout,underline', 'standout', 'black'),
+            ('editing', 'dark blue', 'light gray', '', 'standout', 'black'),
             ('header', 'black,underline', 'light gray', 'standout,underline', 'white,underline,bold', 'black'),
             ('panel', 'light gray', 'dark blue', '', '#ffd', '#00a'),
             ('focus', 'light gray', 'dark cyan', 'standout', '#ff8', '#806'),
@@ -513,11 +416,13 @@ class UrwidHandler(logging.StreamHandler):
         self.listbox.body.append(msg)
         self.listbox.set_focus(len(self.listbox.body) - 1) # scroll to last line
 
+
 def replace_handlers(logger, listbox):
     """
     replace current handlers and emit to given urwid.ListBox
     """
     logger.handlers = [UrwidHandler(listbox)]
+
 
 @click.command()
 @click.option('--dict', default='dictionary.txt', type=click.Path(exists=True, readable=True, path_type=pathlib.Path))
@@ -538,4 +443,8 @@ def cli(ctx, *_, **args):
 
     app = App(args)
     app.setup()
+
+    for e in args['excludes']:
+        signals.exclude_change.send('exclude', data=e)
+
     app.run()       # blocking call
