@@ -139,17 +139,12 @@ class SolverUI:
 
     def solve(self):
 
-        # solve the provided word without interaction
-        if self.args.word:
-            word = self.args.word
-            guesses = self.args.guesses
-            self.solver.solve(word, guesses, self.cb_iteration)
-            return
-
         if self.args.score:
-            word = self.args.score
-            word_score = int(self.solver.word_score(word))
-            print(f"{word}: {word_score}")
+            words = [self.args.score] + [self.args.word] + self.args.guesses
+            for word in words:
+                word_score = int(self.solver.word_score(word))
+                print(f"{word}:{word_score}", end=', ')
+            print()
             return
 
         if self.args.first:
@@ -163,6 +158,13 @@ class SolverUI:
 
         if self.args.pos:
             self.print_letter_dist(self.args.pos)
+            return
+
+        # solve the provided word without interaction
+        if self.args.word:
+            word = self.args.word
+            guesses = self.args.guesses
+            self.solver.solve(word, guesses, self.cb_iteration)
             return
 
         while True:

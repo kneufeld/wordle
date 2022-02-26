@@ -117,9 +117,12 @@ class Solver:
         # after sorting by score sometimes two words with same score would be
         # swapped. By sorting on (score, word) (ie: a two pass sort but in one
         # pass) the suggestion list is now stable so this is now deterministic.
+        # Also, by negating (-item) and sorting by reverse=False it's the equiv
+        # of rerverse=True but the actual words are then sorted in alphabetical
+        # order.
 
         suggestions = [(word, self.word_score(word)) for word in self.words]
-        suggestions = sorted(suggestions, key=lambda item: (item[1], item[0]), reverse=True)
+        suggestions = sorted(suggestions, key=lambda item: (-item[1], item[0]), reverse=False)
 
         return suggestions
 
