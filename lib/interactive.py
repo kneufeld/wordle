@@ -31,9 +31,9 @@ class Signal:
         return self._value
 
     @value.setter
-    def value(self, value, sender=None):
+    def value(self, value):
         self._value = value
-        self._signal.send(sender or self._signal.name, value=self.value)
+        self._signal.send(self._signal.name, value=self.value)
 
     def __getattr__(self, name):
         return getattr(self._signal, name)
@@ -51,11 +51,10 @@ class Signals:
             return signal.send(sender, value=value)
         return _converter
 
-
-    pattern    = Signal('pattern',    value='',     doc='called when word pattern updated')
-    excludes   = Signal('excludes',   value='',     doc='called when exclude pattern updated')
-    dictionary = Signal('dictionary', value=list(), doc='called when dictionary loaded')
-    wordlist   = Signal('wordlist',   value=list(), doc='called with updated word list')
+    pattern    = Signal('pattern',    value='')
+    excludes   = Signal('excludes',   value='')
+    dictionary = Signal('dictionary', value=list())
+    wordlist   = Signal('wordlist',   value=list())
 
 signals = Signals()
 
@@ -176,18 +175,6 @@ class WinMatches(Window):
         signals.pattern.connect(self.cb_pattern)
         signals.excludes.connect(self.cb_excludes)
 
-    @property
-    def widget(self):
-        return self.original_widget.original_widget.original_widget
-
-    @property
-    def text(self):
-        return self.widget.get_text()
-
-    @text.setter
-    def text(self, value):
-        return self.widget.set_text(value)
-
     def cb_dictionary(self, sender, value):
         logger.info("dictionary updated")
         self.recalc()
@@ -200,8 +187,28 @@ class WinMatches(Window):
         signals.dictionary.value = self.pattern_match(self.dictionary, None, value)
 
     @property
+    def widget(self):
+        return self.original_widget.original_widget.original_widget
+
+    @property
+    def text(self):
+        return self.widget.get_text()
+
+    @text.setter
+    def text(self, value):
+        return self.widget.set_text(value)
+
+    @property
     def dictionary(self):
         return signals.dictionary.value
+
+    @property
+    def pattern(self):
+        return signals.pattern.value
+
+    @property
+    def excludes(self):
+        return signals.excludes.value
 
     @property
     def words(self):
@@ -218,21 +225,9 @@ class WinMatches(Window):
         else:
             self.text = '. is a wildcard\n! to exclude a letter'
 
-    @property
-    def pattern(self):
-        return signals.pattern.value
-
-    @property
-    def excludes(self):
-        return signals.excludes.value
-
     def recalc(self):
         logger.debug("recalculating wordlist")
-
-        if self.pattern:
-            self.words = self.pattern_match(self.dictionary, self.pattern, self.excludes)
-        else:
-            self.words = self.dictionary
+        self.words = self.pattern_match(self.dictionary, self.pattern, self.excludes)
 
     def pattern_match(self, words, pattern, excludes):
         if not pattern:
@@ -260,15 +255,14 @@ class WinCounts(Window):
         )
         super().__init__(widget, title='Word Count', title_align='left')
 
-        signals.dictionary.connect(self.cb_wordlist)
         signals.wordlist.connect(self.cb_wordlist)
+
+    def cb_wordlist(self, sender, value):
+        self.widget.set_text(str(len(value)))
 
     @property
     def widget(self):
         return self.original_widget.original_widget.original_widget
-
-    def cb_wordlist(self, sender, value):
-        self.widget.set_text(str(len(value)))
 
 
 class WinLogging(Window):
@@ -308,10 +302,6 @@ class MainFrame(urwid.Frame):
     @property
     def win_logging(self):
         return self.footer.contents[1][0].original_widget.original_widget
-
-    @property
-    def win_plugin(self):
-        return self.footer.contents[1][0].original_widget.original_widget.original_widget
 
     @property
     def body(self):
