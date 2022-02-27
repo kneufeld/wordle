@@ -91,6 +91,10 @@ class WinPattern(Window):
 
         # logger.debug(f"edit: {key}")
 
+        # only allow 5 chars
+        if len(self.text) >= app.args['wordlen']:
+            return
+
         self.text += key
         self.prev = key
 
@@ -184,7 +188,7 @@ class WinMatches(Window):
 
     def cb_exclude(self, sender, data):
         self.excludes += data
-        self.dictionary = self.pattern_match(self.dictionary, '.' * wordlen, self.excludes)
+        self.dictionary = self.pattern_match(self.dictionary, '.' * app.args['wordlen'], self.excludes)
 
     @property
     def dictionary(self):
@@ -239,7 +243,7 @@ class WinMatches(Window):
 
     def pattern_match(self, words, pattern, excludes):
         if not pattern:
-            pattern = '.' * wordlen
+            pattern = '.' * app.args['wordlen']
 
         matches = []
         pattern = re.compile(pattern)
@@ -440,9 +444,7 @@ def cli(ctx, *_, **args):
     !c to add a letter to the exclude list
     """
 
-    global wordlen
-    wordlen = args['wordlen']
-
+    global app
     app = App(args)
     app.setup()
 
