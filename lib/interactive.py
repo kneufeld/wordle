@@ -16,15 +16,17 @@ logger = logging.getLogger()
 
 from lib.wordle import Wordle
 
-
 class Signals:
 
     @staticmethod
-    def urwid_to_blinker(signal, sender, value):
+    def urwid_to_blinker(signal):
         """
-        widget.connect(partial(urwid_to_blinker(blinker_signal)))
+        usage: widget.connect(urwid_to_blinker(blinker_signal))
+        blinker handler must accept 'data' as keyword
         """
-        signal.send(sender, data=value)
+        def _converter(sender, data):
+            return signal.send(sender, data=data)
+        return _converter
 
 
     pattern_change  = signal('pattern_change', doc='called when word pattern updated')
@@ -66,7 +68,7 @@ class WinPattern(Window):
         super().__init__(widget)
 
         self.prev = ''
-        # urwid.connect_signal(self.edit_widget, "change", functools.partial(Signals.urwid_to_blinker, Signals.pattern_change))
+        # urwid.connect_signal(self.widget, "change", Signals.urwid_to_blinker(Signals.pattern_change))
 
     def keypress(self, size, key):
 
