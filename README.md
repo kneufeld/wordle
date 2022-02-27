@@ -31,3 +31,15 @@ Inputting the server response is kinda crappy.
 * `i` letter is _In_ the word
 * `o` letter is _Out_ of the word
 * `e` letter is in the _Exact_ spot
+
+## interactive
+
+This overly complicated tui allow you type in patterns and shows matching words,
+it's a real time grep. One use is to run with `-i` for invisible mode, this just
+shows word counts without showing the words themselves. This is useful to test
+a hypothesis such as _"I think the second letter is an i and ends with a t"_.
+
+Type `.` as a wildcard, type `!c` to exclude the letter `c`.
+
+* `-e letters` if you already know some letters to exclude
+* `-i` invisible mode
