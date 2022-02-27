@@ -100,7 +100,7 @@ class WinPattern(Window):
             return
 
         if self.prev == '!':
-            signals.excludes.value = key
+            signals.excludes.value += key
             self.prev = ''
             return
 
@@ -146,7 +146,7 @@ class WinExcludes(Window):
         self.text = 'excludes: '
 
     def cb_excludes(self, sender, value):
-        self.text = value
+        self.text = 'excludes: ' + value
 
     @property
     def widget(self):
@@ -159,7 +159,7 @@ class WinExcludes(Window):
 
     @text.setter
     def text(self, text):
-        self.widget.set_text(self.text + text)
+        self.widget.set_text(text)
 
 
 class WinMatches(Window):
@@ -167,12 +167,10 @@ class WinMatches(Window):
     def __init__(self, *args, **kw):
         super().__init__(
             urwid.Filler(
-                urwid.Text('. is a wildcard\n! to exclude a letter'),
+                urwid.Text(''),
                 valign='top',
             )
         )
-
-        self._excludes = ''
 
         signals.dictionary.connect(self.cb_dictionary)
         signals.pattern.connect(self.cb_pattern)
@@ -218,7 +216,7 @@ class WinMatches(Window):
         elif self.pattern:
             self.text = ' '.join(self.words)
         else:
-            self.text = ''
+            self.text = '. is a wildcard\n! to exclude a letter'
 
     @property
     def pattern(self):
@@ -286,23 +284,11 @@ class WinLogging(Window):
 
 
 class MainFrame(urwid.Frame):
-    def __init__(self, app, *args, **kw):
+    def __init__(self, *args, **kw):
         super().__init__(urwid.Text(''), *args, **kw)
 
-        self.app = app
-
-        win_logging = WinLogging()
-        win_count = WinCounts()
         win_pattern = WinPattern()
         win_excludes = WinExcludes()
-
-        # win_global = urwid.LineBox(
-        #     urwid.BoxAdapter(
-        #         urwid.Filler( urwid.Text(''), valign='top'),
-        #         height=3
-        #     ),
-        #     title="Global", title_align='left', tlcorner='┬', blcorner='┴',
-        # )
 
         self.header = urwid.Columns([
             ("weight", 1, win_pattern),
@@ -310,6 +296,9 @@ class MainFrame(urwid.Frame):
         ],  dividechars=-1,)
 
         self.body = WinMatches()
+
+        win_logging = WinLogging()
+        win_count = WinCounts()
 
         self.footer = urwid.Columns([
             ("weight", 1, win_count),
@@ -343,7 +332,7 @@ class App:
 
     def setup(self):
 
-        self.frame = MainFrame(self, focus_part='header')
+        self.frame = MainFrame(focus_part='header')
         replace_handlers(logger, self.frame.win_logging)
 
         # load and send dictionary to listeners
@@ -374,33 +363,10 @@ class App:
         self.loop.run() # blocking
 
     def handle_keypress(self, key):
-        logger.debug(f"input: {key}")
+        # logger.debug(f"input: {key}")
 
-        if type(key) is tuple and key and key[0].startswith('mouse'): # 'mouse press/release'
-            logger.warn("no mouse support at this time")
-            return
-
-        # TODO get values from config
-        if key in ('Q', 'f10', 'esc'):
-            # FIXME why isn't self getting deleted?
-            # if self.db:
-            #     self.db.store()
+        if key in ('f10', 'esc'):
             raise urwid.ExitMainLoop()
-
-        # hotkey to direct select of plugin
-        if key in string.ascii_uppercase:
-            plugin = self.find_plugin(key)
-
-            if plugin is not None:
-                self.plugin = plugin
-                return
-
-        # it's ' ' not 'space'
-
-        if key == 'N':
-            self.next_plugin()
-        elif key == 'P':
-            self.prev_plugin()
 
         return key
 
