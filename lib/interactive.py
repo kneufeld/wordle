@@ -208,7 +208,9 @@ class WinMatches(Window):
         self._words = value
         signals.wordlist_change.send('wordlist', data=self.words)
 
-        if self.pattern:
+        if app.args['invisible']:
+            self.text = 'running in invisible mode'
+        elif self.pattern:
             self.text = ' '.join(self.words)
         else:
             self.text = ''
@@ -434,6 +436,7 @@ def replace_handlers(logger, listbox):
 @click.option('--dict', default='dictionary.txt', type=click.Path(exists=True, readable=True, path_type=pathlib.Path))
 @click.option('--len', 'wordlen', default=5, type=int)
 @click.option('--exclude', '-e', 'excludes', metavar='letters', default='', type=str)
+@click.option('--invisible', '-i', is_flag=True, help="don't show matching words, just count")
 @click.pass_context
 def cli(ctx, *_, **args):
     """
