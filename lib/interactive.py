@@ -31,9 +31,9 @@ class Signal:
         return self._value
 
     @value.setter
-    def value(self, value):
+    def value(self, value, sender=None):
         self._value = value
-        self._signal.send(self._signal.name, value=self.value)
+        self._signal.send(sender or self._signal.name, value=self.value)
 
     def __getattr__(self, name):
         return getattr(self._signal, name)
@@ -52,13 +52,12 @@ class Signals:
         return _converter
 
 
-    pattern    = Signal('pattern', value='', doc='called when word pattern updated')
-    excludes   = Signal('excludes', value='', doc='called when exclude pattern updated')
+    pattern    = Signal('pattern',    value='',     doc='called when word pattern updated')
+    excludes   = Signal('excludes',   value='',     doc='called when exclude pattern updated')
     dictionary = Signal('dictionary', value=list(), doc='called when dictionary loaded')
-    wordlist   = Signal('wordlist', value=list(), doc='called with updated word list')
+    wordlist   = Signal('wordlist',   value=list(), doc='called with updated word list')
 
 signals = Signals()
-
 
 
 class Window(urwid.WidgetWrap):
@@ -79,12 +78,13 @@ class Window(urwid.WidgetWrap):
 class WinPattern(Window):
     def __init__(self, *args, **kw):
         label = urwid.Text('pattern:')
-        input = urwid.AttrMap(
+        edit = urwid.AttrMap(
             urwid.Edit('', '', multiline=False, align='left', wrap='clip',),
-            'default', 'focused')
+            'default', 'focused'
+        )
         widget = urwid.Columns([
                 (10, label),
-                (6, input),
+                (6, edit),
                 ('weight', 2, urwid.Padding(urwid.Text(''))),
         ], dividechars=-1)
 
@@ -112,17 +112,17 @@ class WinPattern(Window):
         if key not in string.ascii_lowercase + '.':
             return key
 
-        # logger.debug(f"edit: {key}")
-
         # only allow 5 chars
         if len(self.text) >= app.args['wordlen']:
             return
 
+        # logger.debug(f"edit: {key}")
         self.text += key
         self.prev = key
 
     @property
     def widget(self):
+        # the edit box
         return self.original_widget.original_widget.contents[1][0].original_widget
 
     @property
@@ -207,12 +207,11 @@ class WinMatches(Window):
 
     @property
     def words(self):
-        return self._words
+        return signals.wordlist.value
 
     @words.setter
     def words(self, value):
-        self._words = value
-        signals.wordlist.value = self.words
+        signals.wordlist.value = value
 
         if app.args['invisible']:
             self.text = 'running in invisible mode'
