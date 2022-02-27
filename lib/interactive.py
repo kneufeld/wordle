@@ -16,23 +16,46 @@ logger = logging.getLogger()
 
 from lib.wordle import Wordle
 
+class Signal:
+    """
+    a blinker.signal that is also a variable
+    when signal.value is set, emit the new value
+    """
+
+    def __init__(self, *args, **kw):
+        self._value = kw.pop('value', None)
+        self._signal = signal(*args, **kw)
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        self._value = value
+        self._signal.send(self._signal.name, value=self.value)
+
+    def __getattr__(self, name):
+        return getattr(self._signal, name)
+
+
 class Signals:
 
     @staticmethod
     def urwid_to_blinker(signal):
         """
         usage: widget.connect(urwid_to_blinker(blinker_signal))
-        blinker handler must accept 'data' as keyword
+        blinker handler must accept 'value' as keyword
         """
-        def _converter(sender, data):
-            return signal.send(sender, data=data)
+        def _converter(sender, value):
+            return signal.send(sender, value=value)
         return _converter
 
 
-    pattern_change  = signal('pattern_change', doc='called when word pattern updated')
-    exclude_change  = signal('exclude_change', doc='called when exclude pattern updated')
-    dict_loaded     = signal('dict_loaded', doc='called when dictionary loaded')
-    wordlist_change = signal('wordlist_change', doc='called with updated word list')
+    pattern    = Signal('pattern', value='', doc='called when word pattern updated')
+    excludes   = Signal('excludes', value='', doc='called when exclude pattern updated')
+    dictionary = Signal('dictionary', value=list(), doc='called when dictionary loaded')
+    wordlist   = Signal('wordlist', value=list(), doc='called with updated word list')
 
 signals = Signals()
 
@@ -68,7 +91,7 @@ class WinPattern(Window):
         super().__init__(widget)
 
         self.prev = ''
-        # urwid.connect_signal(self.widget, "change", Signals.urwid_to_blinker(Signals.pattern_change))
+        # urwid.connect_signal(self.widget, "change", Signals.urwid_to_blinker(Signals.pattern))
 
     def keypress(self, size, key):
 
@@ -77,7 +100,7 @@ class WinPattern(Window):
             return
 
         if self.prev == '!':
-            signals.exclude_change.send('exclude', data=key)
+            signals.excludes.value = key
             self.prev = ''
             return
 
@@ -111,7 +134,7 @@ class WinPattern(Window):
         self.widget.set_edit_text(text)
         self.widget.edit_pos = 100 # end
 
-        signals.pattern_change.send('pattern', data=self.text)
+        signals.pattern.value = self.text
 
 
 class WinExcludes(Window):
@@ -119,13 +142,11 @@ class WinExcludes(Window):
         widget = urwid.Text('')
         super().__init__(widget, tlcorner='┬', blcorner='┴', )
 
-        signals.exclude_change.connect(
-            functools.partial(self.cb_exclude), weak=False
-        )
+        signals.excludes.connect(self.cb_excludes)
         self.text = 'excludes: '
 
-    def cb_exclude(self, sender, data):
-        self.text = data
+    def cb_excludes(self, sender, value):
+        self.text = value
 
     @property
     def widget(self):
@@ -151,20 +172,11 @@ class WinMatches(Window):
             )
         )
 
-        self._pattern = ''
         self._excludes = ''
 
-        signals.dict_loaded.connect(
-            functools.partial(self.cb_dict_loaded), weak=False
-        )
-
-        signals.pattern_change.connect(
-            functools.partial(self.cb_pattern), weak=False
-        )
-
-        signals.exclude_change.connect(
-            functools.partial(self.cb_exclude), weak=False
-        )
+        signals.dictionary.connect(self.cb_dictionary)
+        signals.pattern.connect(self.cb_pattern)
+        signals.excludes.connect(self.cb_excludes)
 
     @property
     def widget(self):
@@ -178,26 +190,20 @@ class WinMatches(Window):
     def text(self, value):
         return self.widget.set_text(value)
 
-    def cb_dict_loaded(self, sender, data):
-        logger.info("loaded dictionary")
-        self.dictionary = data
+    def cb_dictionary(self, sender, value):
+        logger.info("dictionary updated")
+        self.recalc()
 
-    def cb_pattern(self, sender, data):
-        # logger.info(f"match pattern: {data}")
-        self.pattern = data
+    def cb_pattern(self, sender, value):
+        # logger.debug(f"match pattern: {value}")
+        self.recalc()
 
-    def cb_exclude(self, sender, data):
-        self.excludes += data
-        self.dictionary = self.pattern_match(self.dictionary, '.' * app.args['wordlen'], self.excludes)
+    def cb_excludes(self, sender, value):
+        signals.dictionary.value = self.pattern_match(self.dictionary, None, value)
 
     @property
     def dictionary(self):
-        return self._dictionary
-
-    @dictionary.setter
-    def dictionary(self, value):
-        logger.debug(f"dictionary has {len(value)} words")
-        self._dictionary = sorted(value)
+        return signals.dictionary.value
 
     @property
     def words(self):
@@ -206,7 +212,7 @@ class WinMatches(Window):
     @words.setter
     def words(self, value):
         self._words = value
-        signals.wordlist_change.send('wordlist', data=self.words)
+        signals.wordlist.value = self.words
 
         if app.args['invisible']:
             self.text = 'running in invisible mode'
@@ -217,23 +223,11 @@ class WinMatches(Window):
 
     @property
     def pattern(self):
-        return self._pattern
-
-    @pattern.setter
-    def pattern(self, value):
-        logger.debug(f"pattern={value}")
-        self._pattern = value
-        self.recalc()
+        return signals.pattern.value
 
     @property
     def excludes(self):
-        return self._excludes
-
-    @excludes.setter
-    def excludes(self, value):
-        logger.debug(f"excludes={value}")
-        self._excludes = value
-        self.recalc()
+        return signals.excludes.value
 
     def recalc(self):
         logger.debug("recalculating wordlist")
@@ -269,15 +263,15 @@ class WinCounts(Window):
         )
         super().__init__(widget, title='Word Count', title_align='left')
 
-        signals.dict_loaded.connect(functools.partial(self.cb_wordlist), weak=False)
-        signals.wordlist_change.connect(functools.partial(self.cb_wordlist), weak=False)
+        signals.dictionary.connect(self.cb_wordlist)
+        signals.wordlist.connect(self.cb_wordlist)
 
     @property
     def widget(self):
         return self.original_widget.original_widget.original_widget
 
-    def cb_wordlist(self, sender, data):
-        self.widget.set_text(str(len(data)))
+    def cb_wordlist(self, sender, value):
+        self.widget.set_text(str(len(value)))
 
 
 class WinLogging(Window):
@@ -355,7 +349,7 @@ class App:
 
         # load and send dictionary to listeners
         wordle = Wordle(self.args['dict'], self.args['wordlen'])
-        signals.dict_loaded.send(data=wordle.words)
+        signals.dictionary.value = wordle.words
 
     def run(self):
         palette = [
@@ -452,6 +446,6 @@ def cli(ctx, *_, **args):
     app.setup()
 
     for e in args['excludes']:
-        signals.exclude_change.send('exclude', data=e)
+        signals.excludes.value += e
 
     app.run()       # blocking call
