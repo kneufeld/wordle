@@ -10,6 +10,7 @@ setup(
         'click',
         'rich',
         'urwid',
+        'blinker',
     ],
     entry_points={
         'console_scripts': [
