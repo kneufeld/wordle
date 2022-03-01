@@ -790,8 +790,6 @@ dated
 dates
 datum
 daunt
-david
-davis
 deals
 dealt
 death
@@ -1845,7 +1843,6 @@ loopy
 loose
 lopez
 lords
-loren
 lorry
 loser
 loses
@@ -2246,8 +2243,6 @@ patio
 patsy
 patti
 patty
-paula
-paulo
 pause
 paved
 paxil
@@ -2407,7 +2402,6 @@ prowl
 proxy
 prude
 prune
-prweb
 psalm
 pubic
 pudgy
@@ -2529,7 +2523,6 @@ renee
 renew
 rents
 repay
-repec
 repel
 reply
 rerun
@@ -2547,7 +2540,6 @@ rhino
 rhode
 rhyme
 rican
-ricky
 ricoh
 rider
 rides
