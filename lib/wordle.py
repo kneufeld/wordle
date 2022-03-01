@@ -1,4 +1,6 @@
 
+from .utils import splice
+
 class Wordle:
 
     LETTER_IN    = 'i' # in, in word but wrong spot
@@ -6,6 +8,7 @@ class Wordle:
     LETTER_EXACT = 'e' # exact spot
 
     def __init__(self, dictpath, wordlen):
+        self.wordlen = wordlen
         self.words = self.read_dict(dictpath, wordlen)
 
     @property
@@ -54,16 +57,27 @@ class Wordle:
     def check_word(self, word, guess):
         """
         return a response for the given guess
+
+        NOTE: not completely sure this response matches official version in the case
+        where there are multiple matches of the same letter.
         """
 
-        resp = ''
+        resp = '.' * self.wordlen
 
         for i in range(len(word)):
             if guess[i] == word[i]:
-                resp += self.LETTER_EXACT
-            elif guess[i] in word:
-                resp += self.LETTER_IN
-            else:
-                resp += self.LETTER_OUT
+                resp = splice(resp, i, self.LETTER_EXACT)
+                word = splice(word, i, '.')
 
+        for i in range(len(word)):
+            if resp[i] != '.':
+                continue
+
+            if guess[i] in word:
+                resp = splice(resp, i, self.LETTER_IN)
+                word = splice(word, word.index(guess[i]), '.')
+            else:
+                resp = splice(resp, i, self.LETTER_OUT)
+
+        assert '.' not in resp, f"invalid response generated: {resp=}"
         return resp
