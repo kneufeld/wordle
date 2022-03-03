@@ -59,11 +59,7 @@ aider
 aides
 aimed
 aired
-aires
 aisle
-akron
-alain
-alamo
 alarm
 album
 alert
@@ -150,9 +146,6 @@ arena
 argos
 argue
 argus
-arial
-ariel
-aries
 arise
 armed
 armor
@@ -1533,7 +1526,6 @@ humus
 hunch
 hunks
 hunky
-huron
 hurry
 hurts
 husky
