@@ -109,7 +109,8 @@ class SolverUI:
         found_resp = Wordle.LETTER_EXACT * self.wordlen
         _guess = WordleUI.colorize_word(resp, guess)
         _resp = WordleUI.colorize_word(resp, resp)
-        print(f"round {iteration}: guess: {_guess}, resp: {_resp}, dict len: {curr_len}, {[v for v,c in suggestions[:5]]}")
+        print(f"round {iteration}: guess: {_guess}, resp: {_resp}, ", end='')
+        print(f"dict: {curr_len:4}: {', '.join([v for v,c in suggestions[:6]])}")
 
         if resp == found_resp:
             print(f"word is: {words.pop()}")
