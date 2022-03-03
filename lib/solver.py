@@ -148,7 +148,12 @@ class Solver:
                 contains += c
                 self.pattern[i] = _elsewhere(self.pattern[i], c)
             elif r == Wordle.LETTER_OUT:
-                excludes += c
+                # wordle responsds with OUT on second instance of a letter if letter only appears
+                # once in the word, make sure we don't exclude that letter for future consideration
+                # eg. word: mourn, guess: moron -> eeioe
+                # print(f"{resp=}, {i=}, {r=}, {c=}, {contains=}, {excludes=}, {self.pattern}")
+                if c not in contains.split() + self.pattern:
+                    excludes += c
             elif r == Wordle.LETTER_EXACT:
                 self.pattern[i] = c
 
