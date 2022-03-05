@@ -1,5 +1,6 @@
 import re
 import collections
+import string
 
 from lib.wordle import Wordle
 from lib.utils import splice, dotdict
@@ -38,6 +39,7 @@ class Solver:
 
         self._letter_counts = self.letter_counts(self.words)
         self._letter_dist = self.letter_distribution(self.words)
+        self._letter_pairs = self.letter_pairs(self.words)
 
     def letter_counts(self, words):
         """
@@ -77,16 +79,38 @@ class Solver:
 
         return dist
 
+    def letter_pairs(self, words):
+        counts = collections.defaultdict(int)
+
+        for a in string.ascii_lowercase:
+            for b in string.ascii_lowercase:
+                for word in words:
+                    pair = f"{a}{b}"
+                    if pair in word:
+                        counts[pair] += 1
+
+        pairs = dict(sorted(counts.items(), key=lambda item: item[1], reverse=True))
+        return pairs
+
     def word_score(self, word):
+        def pair_generator(word):
+            for i in range(len(word)-1):
+                yield f"{word[i]}{word[i+1]}"
+
         score = sum([
             self._letter_counts[c] for c in set(word)
         ])
         # return score
 
         # how often is the letter in that position in the word
-        per = sum([self._letter_dist[c][i] for i, c in enumerate(word)])
-        per /= self.wordlen # average letter position
-        score *= 1 + per
+        pos = sum([self._letter_dist[c][i] for i, c in enumerate(word)])
+        pos /= self.wordlen # average letter position
+        score *= 1 + pos
+
+        # check if word has common letter pairs in it. eg. ee, ch
+        pair_score = sum([self._letter_pairs[pair] for pair in pair_generator(word)])
+        pair_score /= sum([v for k, v in self._letter_pairs.items()])
+        score *= 1 + pair_score
 
         return score
 

@@ -37,7 +37,7 @@ class Wordle:
     @classmethod
     def read_dict(cls, dictpath, wordlen):
         dictionary = dictpath.open().read().splitlines()
-        print(f"starting dictionary contains {len(dictionary)} words")
+        # print(f"starting dictionary contains {len(dictionary)} words")
 
         words = set()
 
