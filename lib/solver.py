@@ -178,6 +178,11 @@ class Solver:
                 # print(f"{resp=}, {i=}, {r=}, {c=}, {contains=}, {excludes=}, {self.pattern}")
                 if c not in contains.split() + self.pattern:
                     excludes += c
+                else:
+                    # if our guess has a given letter twice but it only appears once in the answer
+                    # then do this weaker exclusion.
+                    # eg. word: hatch, guess: catch -> oeeee
+                    self.pattern[i] = _elsewhere(self.pattern[i], c)
             elif r == Wordle.LETTER_EXACT:
                 self.pattern[i] = c
 
