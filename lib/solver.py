@@ -166,27 +166,36 @@ class Solver:
         contains = ''
         excludes = ''
 
+        # handle exact matches first
+        for i, r in enumerate(resp):
+            if r == Wordle.LETTER_EXACT:
+                c = guess[i]
+                self.pattern[i] = c
+                contains += c
+
         for i, r in enumerate(resp):
             c = guess[i]
+
             if r == Wordle.LETTER_IN:
                 contains += c
                 self.pattern[i] = _elsewhere(self.pattern[i], c)
+
             elif r == Wordle.LETTER_OUT:
-                # wordle responsds with OUT on second instance of a letter if letter only appears
+                # wordle responds with OUT on second instance of a letter if letter only appears
                 # once in the word, make sure we don't exclude that letter for future consideration
                 # eg. word: mourn, guess: moron -> eeioe
                 # print(f"{resp=}, {i=}, {r=}, {c=}, {contains=}, {excludes=}, {self.pattern}")
-                if c not in contains.split() + self.pattern:
+                if c not in contains.split():
                     excludes += c
                 else:
                     # if our guess has a given letter twice but it only appears once in the answer
                     # then do this weaker exclusion.
                     # eg. word: hatch, guess: catch -> oeeee
                     self.pattern[i] = _elsewhere(self.pattern[i], c)
-            elif r == Wordle.LETTER_EXACT:
-                self.pattern[i] = c
 
+        contains = ''.join(set(contains))
         exact = ''.join(self.pattern)
+        # print(f"{guess=}, {resp=}, {exact=}, {contains=}, {excludes=}, {self.pattern}")
         return exact, contains, excludes
 
     def prune_words(self, guess, resp):
