@@ -71,7 +71,6 @@ alice
 alien
 align
 alike
-alito
 alive
 allah
 allan
@@ -1581,12 +1580,9 @@ ipods
 ipsec
 iraqi
 irate
-irene
 irish
 irons
 irony
-irwin
-isaac
 islam
 isles
 islet
@@ -1597,14 +1593,7 @@ itchy
 items
 ivory
 jacks
-jacob
-james
-jamie
-janet
-janis
 japan
-jared
-jason
 jaunt
 jazzy
 jboss
