@@ -185,7 +185,7 @@ class Solver:
                 # once in the word, make sure we don't exclude that letter for future consideration
                 # eg. word: mourn, guess: moron -> eeioe
                 # print(f"{resp=}, {i=}, {r=}, {c=}, {contains=}, {excludes=}, {self.pattern}")
-                if c not in contains.split():
+                if c not in contains:
                     excludes += c
                 else:
                     # if our guess has a given letter twice but it only appears once in the answer
