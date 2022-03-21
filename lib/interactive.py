@@ -53,6 +53,7 @@ class Signals:
 
     pattern    = Signal('pattern',    value='')
     excludes   = Signal('excludes',   value='')
+    includes   = Signal('includes',   value='')
     dictionary = Signal('dictionary', value=list())
     wordlist   = Signal('wordlist',   value=list())
 
@@ -94,12 +95,17 @@ class WinPattern(Window):
 
     def keypress(self, size, key):
 
-        if key == '!':
+        if key in '!@':
             self.prev = key
             return
 
         if self.prev == '!':
             signals.excludes.value += key
+            self.prev = ''
+            return
+
+        if self.prev == '@':
+            signals.includes.value += key
             self.prev = ''
             return
 
@@ -161,6 +167,31 @@ class WinExcludes(Window):
         self.widget.set_text(text)
 
 
+class WinIncludes(Window):
+    def __init__(self, *args, **kw):
+        widget = urwid.Text('')
+        super().__init__(widget, tlcorner='┬', blcorner='┴', )
+
+        signals.includes.connect(self.cb_includes)
+        self.text = 'includes: '
+
+    def cb_includes(self, sender, value):
+        self.text = 'includes: ' + value
+
+    @property
+    def widget(self):
+        return self.original_widget.original_widget
+
+    @property
+    def text(self):
+        text, _ = self.widget.get_text()
+        return text
+
+    @text.setter
+    def text(self, text):
+        self.widget.set_text(text)
+
+
 class WinMatches(Window):
 
     def __init__(self, *args, **kw):
@@ -174,6 +205,7 @@ class WinMatches(Window):
         signals.dictionary.connect(self.cb_dictionary)
         signals.pattern.connect(self.cb_pattern)
         signals.excludes.connect(self.cb_excludes)
+        signals.includes.connect(self.cb_includes)
 
     def cb_dictionary(self, sender, value):
         logger.info("dictionary updated")
@@ -184,7 +216,11 @@ class WinMatches(Window):
         self.recalc()
 
     def cb_excludes(self, sender, value):
-        signals.dictionary.value = self.pattern_match(self.dictionary, None, value)
+        signals.dictionary.value = self.pattern_match(self.dictionary, None, value, self.includes)
+
+    def cb_includes(self, sender, value):
+        # FIXME
+        signals.dictionary.value = self.pattern_match(self.dictionary, None, self.excludes, value)
 
     @property
     def widget(self):
@@ -211,6 +247,10 @@ class WinMatches(Window):
         return signals.excludes.value
 
     @property
+    def includes(self):
+        return signals.includes.value
+
+    @property
     def words(self):
         return signals.wordlist.value
 
@@ -223,23 +263,25 @@ class WinMatches(Window):
         elif self.pattern:
             self.text = ' '.join(self.words)
         else:
-            self.text = '. is a wildcard\n! to exclude a letter'
+            self.text = '. is a wildcard\n! to exclude a letter\n@ to include a letter'
 
     def recalc(self):
         logger.debug("recalculating wordlist")
-        self.words = self.pattern_match(self.dictionary, self.pattern, self.excludes)
+        self.words = self.pattern_match(self.dictionary, self.pattern, self.excludes, self.includes)
 
-    def pattern_match(self, words, pattern, excludes):
+    def pattern_match(self, words, pattern, excludes, includes):
         if not pattern:
             pattern = '.' * app.args['wordlen']
 
         matches = []
         pattern = re.compile(pattern)
+        check_includes = not bool(includes)
 
         for word in words:
             if all([
                 pattern.match(word),     # re.match is beginning of string
                 not any([c in word for c in excludes]),
+                check_includes or all([c in word for c in includes]),
             ]):
                 matches.append(word)
 
@@ -283,9 +325,11 @@ class MainFrame(urwid.Frame):
 
         win_pattern = WinPattern()
         win_excludes = WinExcludes()
+        win_includes = WinIncludes()
 
         self.header = urwid.Columns([
             ("weight", 1, win_pattern),
+            ("weight", 1, win_includes),
             ("weight", 1, win_excludes),
         ],  dividechars=-1,)
 
@@ -385,6 +429,7 @@ def replace_handlers(logger, listbox):
 @click.option('--dict', default='dictionary.txt', type=click.Path(exists=True, readable=True, path_type=pathlib.Path))
 @click.option('--len', 'wordlen', default=5, type=int)
 @click.option('--exclude', '-e', 'excludes', metavar='letters', default='', type=str)
+@click.option('--include', '-I', 'includes', metavar='letters', default='', type=str)
 @click.option('--invisible', '-i', is_flag=True, help="don't show matching words, just count")
 @click.pass_context
 def cli(ctx, *_, **args):
@@ -400,7 +445,10 @@ def cli(ctx, *_, **args):
     app = App(args)
     app.setup()
 
-    for e in args['excludes']:
-        signals.excludes.value += e
+    for c in args['excludes']:
+        signals.excludes.value += c
+
+    for c in args['includes']:
+        signals.includes.value += c
 
     app.run()       # blocking call
