@@ -191,7 +191,7 @@ class SolverUI:
 @click.option('--len', 'wordlen', default=5, type=int)
 @click.option('--first', is_flag=True, help="show first suggestion and exit")
 @click.option('--count', is_flag=True, help="show letter counts")
-@click.option('--score', metavar='word', help="show word score")
+@click.option('--score', metavar='word [word]', help="show word score")
 @click.option('--pos', metavar='letter', help="show distribution of letter")
 @click.option('--pairs', is_flag=True, help="show most common pairs of letters")
 @click.argument('word', required=False, nargs=1)
