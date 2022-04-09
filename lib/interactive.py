@@ -100,7 +100,7 @@ class WinPattern(Window):
             return
 
         if self.prev == '!':
-            signals.excludes.value += key
+            signals.excludes.value = ''.join(sorted(set(signals.excludes.value + key)))
             self.prev = ''
             return
 
@@ -446,7 +446,7 @@ def cli(ctx, *_, **args):
     app.setup()
 
     for c in args['excludes']:
-        signals.excludes.value += c
+        signals.excludes.value = ''.join(sorted(set(signals.excludes.value + c)))
 
     for c in args['includes']:
         signals.includes.value += c
